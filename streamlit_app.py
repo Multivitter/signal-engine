@@ -783,14 +783,15 @@ with tab2:
             ))
             fig.add_hline(y=0, line=dict(color='#1e1e2e', dash='dash', width=1))
             fig.update_layout(
-                **CHART_THEME,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(family='Space Mono, monospace', color='#64748b', size=11),
+                xaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e'),
+                yaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e',
+                           tickformat='.3f', range=[-1, 1]),
+                margin=dict(l=10, r=10, t=30, b=10),
                 height=250,
                 showlegend=False,
-                yaxis=dict(
-                    **CHART_THEME['yaxis'],
-                    tickformat='.3f',
-                    range=[-1, 1],
-                ),
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
