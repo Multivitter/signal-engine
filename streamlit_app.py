@@ -227,15 +227,11 @@ div[data-testid="stMetricValue"] {
 @st.cache_resource
 def get_connection():
     try:
-        conn = psycopg2.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", 5432),
-            dbname=os.getenv("DB_NAME", "signal_engine"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", ""),
-        )
+        database_url = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+        conn = psycopg2.connect(database_url)
         return conn
     except Exception as e:
+        st.error(f"DB connection error: {e}")
         return None
 
 
