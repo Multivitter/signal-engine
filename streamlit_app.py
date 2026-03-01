@@ -186,6 +186,313 @@ section[data-testid="stSidebar"] .block-container {
 /* Plotly dark override */
 .js-plotly-plot .plotly .modebar { background: transparent !important; }
 
+/* Streamlit overrides */"""
+Signal Engine Dashboard
+Unified intelligence dashboard for crypto + Amazon signals
+"""
+
+import streamlit as st
+import psycopg2
+import psycopg2.extras
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ─── GEMINI AI ───────────────────────────────────────────────────────────────
+
+DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite") or st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
+def call_gemini(prompt: str) -> str:
+    import requests as _req
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    try:
+        r = _req.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            params={"key": GEMINI_API_KEY},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+            },
+            timeout=30
+        )
+        if r.status_code == 200:
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return f"Gemini error {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def generate_insights(category=None, lang="RU"):
+    conn_ins = psycopg2.connect(DATABASE_URL)
+
+    where = "WHERE scraped_at >= NOW() - INTERVAL '24 hours'"
+    if category:
+        where += f" AND category = '{category}'"
+
+    posts_df = pd.read_sql(f"""
+        SELECT subreddit, category, title, upvotes,
+               sentiment_label, sentiment_score, is_hot
+        FROM reddit_posts {where}
+        ORDER BY upvotes DESC LIMIT 40
+    """, conn_ins)
+
+    stats_df = pd.read_sql(f"""
+        SELECT category,
+               COUNT(*) as total,
+               AVG(sentiment_score) as avg_sentiment,
+               SUM(CASE WHEN is_hot THEN 1 ELSE 0 END) as hot_count,
+               SUM(CASE WHEN sentiment_label='positive' THEN 1 ELSE 0 END) as positive,
+               SUM(CASE WHEN sentiment_label='negative' THEN 1 ELSE 0 END) as negative
+        FROM reddit_posts {where}
+        GROUP BY category
+    """, conn_ins)
+    conn_ins.close()
+
+    if posts_df.empty:
+        return {"error": "Нет данных для анализа" if lang == "RU" else "No data"}
+
+    results = {"generated_at": datetime.now().strftime("%d %b %Y · %H:%M UTC"),
+               "posts_analyzed": len(posts_df)}
+
+    SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce аналитик уровня хедж-фонда. Анализируешь социальные сигналы из Reddit. Отвечай структурированно, конкретно, без воды."
+
+    def posts_text(cat):
+        df = posts_df[posts_df['category'] == cat].head(15)
+        return "\n".join([f"[{r['upvotes']}↑ {r['sentiment_label']}] r/{r['subreddit']}: {r['title'][:100]}"
+                           for _, r in df.iterrows()])
+
+    def get_stat(cat, col):
+        s = stats_df[stats_df['category'] == cat]
+        return float(s[col].iloc[0]) if not s.empty and col in s.columns else 0
+
+    if category in ("crypto", None) and not posts_df[posts_df['category']=='crypto'].empty:
+        results["crypto"] = call_gemini(f"""{SYSTEM}
+
+КРИПТО ДАННЫЕ 24ч · sentiment {get_stat('crypto','avg_sentiment'):+.3f} · горячих {int(get_stat('crypto','hot_count'))}
+
+{posts_text('crypto')}
+
+Структура ответа:
+## 🎯 ГЛАВНЫЙ СИГНАЛ
+## 📊 SENTIMENT
+## 🔥 ТОП НАРРАТИВ
+## ⚡ ТОРГОВОЕ ДЕЙСТВИЕ
+## ⚠️ РИСКИ""")
+
+    if category in ("amazon", None) and not posts_df[posts_df['category']=='amazon'].empty:
+        results["amazon"] = call_gemini(f"""{SYSTEM}
+
+AMAZON FBA ДАННЫЕ 24ч · sentiment {get_stat('amazon','avg_sentiment'):+.3f} · горячих {int(get_stat('amazon','hot_count'))}
+
+{posts_text('amazon')}
+
+Структура ответа:
+## 🎯 ГЛАВНАЯ БОЛЬ ПРОДАВЦОВ
+## 📊 РЫНОЧНЫЙ СИГНАЛ
+## 🔥 ВОЗМОЖНОСТЬ
+## ⚡ ДЕЙСТВИЕ
+## ⚠️ АЛЕРТЫ""")
+
+    if category is None:
+        hot = posts_df[posts_df['is_hot']==True].head(10)
+        hot_text = "\n".join([f"[{r['category'].upper()} {r['upvotes']}↑] {r['title'][:90]}"
+                                for _, r in hot.iterrows()])
+        results["summary"] = call_gemini(f"""{SYSTEM}
+
+Crypto sentiment: {get_stat('crypto','avg_sentiment'):+.3f}
+Amazon sentiment: {get_stat('amazon','avg_sentiment'):+.3f}
+
+ТОП ГОРЯЧИЕ:
+{hot_text}
+
+Дай EXECUTIVE SUMMARY:
+## 🌐 MACRO СИГНАЛ
+## 💡 ГЛАВНЫЙ ИНСАЙТ ДНЯ
+## 📈 КРИПТО: ДЕЙСТВИЕ
+## 📦 AMAZON: ДЕЙСТВИЕ
+## 🎯 ИТОГ""")
+
+    return results
+
+# ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
+
+st.set_page_config(
+    page_title="Signal Engine",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ─── CUSTOM CSS ──────────────────────────────────────────────────────────────
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* Base */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    background-color: #0a0a0f;
+    color: #e2e8f0;
+}
+
+.main { background-color: #0a0a0f; }
+.block-container { padding: 1.5rem 2rem; max-width: 1400px; }
+
+/* Header */
+.dash-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #00ff88;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.2rem;
+}
+.dash-sub {
+    font-size: 0.85rem;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+
+/* Metric cards */
+.metric-card {
+    background: #111118;
+    border: 1px solid #1e1e2e;
+    border-radius: 8px;
+    padding: 1.2rem 1.4rem;
+    position: relative;
+    overflow: hidden;
+}
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #00ff88, #0ea5e9);
+}
+.metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1;
+}
+.metric-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.4rem;
+}
+.metric-delta {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #00ff88;
+    margin-top: 0.3rem;
+}
+.metric-delta.neg { color: #f43f5e; }
+
+/* Signal badge */
+.signal-hot {
+    display: inline-block;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.signal-pos {
+    display: inline-block;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.25);
+    color: #00ff88;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.signal-neg {
+    display: inline-block;
+    background: rgba(244, 63, 94, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    color: #f43f5e;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.signal-neu {
+    display: inline-block;
+    background: rgba(100, 116, 139, 0.15);
+    border: 1px solid rgba(100, 116, 139, 0.25);
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Section headers */
+.section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #475569;
+    border-bottom: 1px solid #1e1e2e;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Feed items */
+.feed-item {
+    background: #111118;
+    border: 1px solid #1a1a2e;
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.6rem;
+    transition: border-color 0.2s;
+}
+.feed-item:hover { border-color: #2d2d4a; }
+.feed-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #e2e8f0;
+    margin-bottom: 0.35rem;
+    line-height: 1.4;
+}
+.feed-meta {
+    font-size: 0.75rem;
+    color: #475569;
+    font-family: 'Space Mono', monospace;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #0d0d15;
+    border-right: 1px solid #1a1a2e;
+}
+section[data-testid="stSidebar"] .block-container {
+    padding: 1.5rem 1rem;
+}
+
+/* Plotly dark override */
+.js-plotly-plot .plotly .modebar { background: transparent !important; }
+
 /* Streamlit overrides */
 div[data-testid="stMetric"] {
     background: #111118;
@@ -552,11 +859,12 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── MAIN TABS ───────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📡 " + ("Лента" if RU else "Live Feed"),
     "📊 " + ("Аналитика" if RU else "Analytics"),
     "🔑 " + ("Ключевые слова" if RU else "Keywords"),
     "🔍 " + ("Google Интел" if RU else "Google Intel"),
+    "🤖 AI " + ("Инсайты" if RU else "Insights"),
 ])
 
 
@@ -865,6 +1173,100 @@ with tab4:
                     <span style="font-family: Space Mono; font-size: 0.78rem; color: #94a3b8;">{int(val or 0):,}</span>
                 </div>
                 """, unsafe_allow_html=True)
+
+
+# ────────── TAB 5: AI INSIGHTS ─────────────────────────────────────────────
+
+with tab5:
+    st.markdown(f'<div class="section-title">{"AI Анализ · Gemini" if RU else "AI Analysis · Gemini"}</div>', unsafe_allow_html=True)
+
+    col_ai1, col_ai2 = st.columns([2, 1])
+
+    with col_ai2:
+        st.markdown(f"""
+        <div class="metric-card" style="margin-bottom:1rem">
+            <div class="metric-label">{"МОДЕЛЬ" if RU else "MODEL"}</div>
+            <div style="font-family: Space Mono; font-size:0.85rem; color:#00ff88; margin-top:0.3rem">gemini-2.5-flash-lite</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        ai_category = st.selectbox(
+            "Анализировать" if RU else "Analyze",
+            options=["all", "crypto", "amazon"],
+            format_func=lambda x: {
+                "all":    "🌐 Всё" if RU else "🌐 All",
+                "crypto": "₿ Крипто",
+                "amazon": "📦 Amazon",
+            }[x],
+            key="ai_cat"
+        )
+
+        generate_btn = st.button(
+            "⚡ " + ("Сгенерировать инсайт" if RU else "Generate Insight"),
+            use_container_width=True,
+            type="primary"
+        )
+
+        st.markdown(f"""
+        <div style="font-size:0.72rem; color:#334155; margin-top:1rem; line-height:1.6;">
+            {"Анализирует горячие посты за 24ч и генерирует экспертный вывод уровня хедж-фонда." if RU else "Analyzes hot posts from last 24h and generates hedge-fund grade insights."}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_ai1:
+        if generate_btn:
+            cat_param = None if ai_category == "all" else ai_category
+            with st.spinner("🤖 " + ("Анализирую сигналы..." if RU else "Analyzing signals...")):
+                insights = generate_insights(category=cat_param, lang=lang)
+
+            if "error" in insights:
+                st.error(insights["error"])
+            else:
+                st.markdown(f'<div style="font-size:0.72rem; color:#475569; font-family: Space Mono; margin-bottom:1rem;">'
+                    + ("Сгенерировано:" if RU else "Generated:") + f' {insights.get("generated_at","")} · {insights.get("posts_analyzed",0)} ' 
+                    + ("постов проанализировано" if RU else "posts analyzed") + '</div>', unsafe_allow_html=True)
+
+                if "summary" in insights:
+                    st.markdown(f"""
+                    <div class="feed-item" style="border-color:#00ff8833; margin-bottom:1rem;">
+                        <div style="font-family: Space Mono; font-size:0.7rem; color:#00ff88; margin-bottom:0.5rem;">
+                            {"EXECUTIVE SUMMARY" if not RU else "СВОДКА"}
+                        </div>
+                        <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.7;">
+                            {insights["summary"].replace(chr(10), "<br>")}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                if "crypto" in insights:
+                    st.markdown(f"""
+                    <div class="feed-item" style="border-color:#0ea5e933; margin-bottom:1rem;">
+                        <div style="font-family: Space Mono; font-size:0.7rem; color:#0ea5e9; margin-bottom:0.5rem;">
+                            ₿ CRYPTO ANALYSIS
+                        </div>
+                        <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.7;">
+                            {insights["crypto"].replace(chr(10), "<br>")}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                if "amazon" in insights:
+                    st.markdown(f"""
+                    <div class="feed-item" style="border-color:#f59e0b33; margin-bottom:1rem;">
+                        <div style="font-family: Space Mono; font-size:0.7rem; color:#f59e0b; margin-bottom:0.5rem;">
+                            📦 AMAZON ANALYSIS
+                        </div>
+                        <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.7;">
+                            {insights["amazon"].replace(chr(10), "<br>")}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="color:#334155; font-size:0.9rem; padding: 3rem 0; text-align:center; font-family: Space Mono;">
+                {"← Нажми кнопку для генерации AI инсайта" if RU else "← Click button to generate AI insight"}
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
