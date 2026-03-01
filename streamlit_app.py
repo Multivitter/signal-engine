@@ -1080,11 +1080,16 @@ with tab5:
 
         ai_category = st.selectbox(
             "Анализировать" if RU else "Analyze",
-            options=["all", "crypto", "amazon"],
+            options=["all", "crypto", "amazon", "geopolitics", "ai_tech", "macro", "regulations", "ecommerce"],
             format_func=lambda x: {
-                "all":    "🌐 Всё" if RU else "🌐 All",
-                "crypto": "₿ Крипто",
-                "amazon": "📦 Amazon",
+                "all":         "🌐 Всё"         if RU else "🌐 All",
+                "crypto":      "₿ Крипто"       if RU else "₿ Crypto",
+                "amazon":      "📦 Amazon FBA",
+                "geopolitics": "🏛 Геополитика" if RU else "🏛 Geopolitics",
+                "ai_tech":     "🤖 AI / Tech",
+                "macro":       "📈 Макро"        if RU else "📈 Macro",
+                "regulations": "⚖️ Регуляции"   if RU else "⚖️ Regulations",
+                "ecommerce":   "🛒 E-commerce",
             }[x],
             key="ai_cat"
         )
