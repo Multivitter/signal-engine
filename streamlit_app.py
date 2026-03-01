@@ -276,7 +276,7 @@ def load_reddit_feed(category=None, days=7, limit=20, only_hot=False):
         SELECT
             title, subreddit, upvotes, comments_count,
             sentiment_label, sentiment_score, is_hot,
-            keywords_found, scraped_at, url
+            keywords_found, scraped_at, post_url as url
         FROM reddit_posts
         {where}
         ORDER BY upvotes DESC
@@ -456,40 +456,49 @@ with st.sidebar:
 
     st.markdown("---")
 
+    lang = st.radio("🌐", ["RU", "EN"], horizontal=True, index=0)
+    RU = lang == "RU"
+
+    st.markdown("---")
+
     category = st.selectbox(
-        "CATEGORY",
+        "КАТЕГОРИЯ" if RU else "CATEGORY",
         options=["all", "crypto", "amazon"],
-        format_func=lambda x: {"all": "🌐 All Markets", "crypto": "₿ Crypto / Solana", "amazon": "📦 Amazon FBA"}[x]
+        format_func=lambda x: {
+            "all":    "🌐 Все рынки"      if RU else "🌐 All Markets",
+            "crypto": "₿ Крипто / Solana" if RU else "₿ Crypto / Solana",
+            "amazon": "📦 Amazon FBA"
+        }[x]
     )
     cat_filter = None if category == "all" else category
 
     days = st.select_slider(
-        "TIME WINDOW",
+        "ПЕРИОД" if RU else "TIME WINDOW",
         options=[1, 3, 7, 14, 30],
         value=7,
-        format_func=lambda x: f"{x}d"
+        format_func=lambda x: f"{x}д" if RU else f"{x}d"
     )
 
     st.markdown("---")
 
-    show_hot_only = st.checkbox("🔥 Hot signals only", value=False)
-    show_negative = st.checkbox("⚠️ Negative signals", value=False)
+    show_hot_only = st.checkbox("🔥 Только горячие" if RU else "🔥 Hot signals only", value=False)
+    show_negative = st.checkbox("⚠️ Негативные" if RU else "⚠️ Negative signals", value=False)
 
     st.markdown("---")
 
-    # Pipeline status
-    st.markdown('<div class="section-title">Pipeline Status</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-title">{"Статус пайплайна" if RU else "Pipeline Status"}</div>', unsafe_allow_html=True)
     activity = load_recent_activity()
     if not activity.empty:
         for _, row in activity.iterrows():
-            icon = "₿" if row['source'] == 'reddit' else "🔍"
             last = pd.to_datetime(row['last_update'])
             mins_ago = int((datetime.now() - last.replace(tzinfo=None)).total_seconds() / 60) if pd.notna(last) else 999
             status = "🟢" if mins_ago < 360 else "🟡" if mins_ago < 720 else "🔴"
+            ago_label = f"{mins_ago}м назад" if RU else f"{mins_ago}m ago"
+            rec_label = "записей" if RU else "records"
             st.markdown(f"""
             <div style="font-family: Space Mono, monospace; font-size: 0.72rem; color: #64748b; margin-bottom: 0.4rem;">
                 {status} {row['source'].upper()}<br>
-                <span style="color: #334155">{row['records_24h']} records · {mins_ago}m ago</span>
+                <span style="color: #334155">{row['records_24h']} {rec_label} · {ago_label}</span>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -497,7 +506,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    if st.button("🔄 Refresh", use_container_width=True):
+    if st.button("🔄 " + ("Обновить" if RU else "Refresh"), use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
@@ -506,7 +515,7 @@ with st.sidebar:
 
 st.markdown(f"""
 <div class="dash-header">SIGNAL ENGINE</div>
-<div class="dash-sub">{category.upper()} · {days}D WINDOW · {datetime.now().strftime("%d %b %Y · %H:%M UTC")}</div>
+<div class="dash-sub">{category.upper()} · {days}{"Д" if RU else "D"} {"ПЕРИОД" if RU else "WINDOW"} · {datetime.now().strftime("%d %b %Y · %H:%M UTC")}</div>
 """, unsafe_allow_html=True)
 
 
@@ -543,7 +552,12 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── MAIN TABS ───────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4 = st.tabs(["📡 Live Feed", "📊 Analytics", "🔑 Keywords", "🔍 Google Intel"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📡 " + ("Лента" if RU else "Live Feed"),
+    "📊 " + ("Аналитика" if RU else "Analytics"),
+    "🔑 " + ("Ключевые слова" if RU else "Keywords"),
+    "🔍 " + ("Google Интел" if RU else "Google Intel"),
+])
 
 
 # ────────── TAB 1: LIVE FEED ────────────────────────────────────────────────
@@ -552,7 +566,7 @@ with tab1:
     col_a, col_b = st.columns([3, 1])
 
     with col_a:
-        st.markdown('<div class="section-title">Reddit Signal Feed</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">{"Reddit Лента сигналов" if RU else "Reddit Signal Feed"}</div>', unsafe_allow_html=True)
 
         feed = load_reddit_feed(
             category=cat_filter,
@@ -565,7 +579,7 @@ with tab1:
             feed = feed[feed['sentiment_label'] == 'negative']
 
         if feed.empty:
-            st.markdown('<div style="color:#475569; font-size:0.85rem; padding: 2rem 0;">No data yet. Run reddit_collector.py to populate.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#475569; font-size:0.85rem; padding: 2rem 0;">' + ('Нет данных. Запустите reddit_collector.py' if RU else 'No data yet. Run reddit_collector.py to populate.') + '</div>', unsafe_allow_html=True)
         else:
             for _, row in feed.iterrows():
                 hot_badge = '<span class="signal-hot">🔥 HOT</span> ' if row.get('is_hot') else ''
