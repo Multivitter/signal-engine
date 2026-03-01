@@ -15,194 +15,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
-
-st.set_page_config(
-    page_title="Signal Engine",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ─── CUSTOM CSS ──────────────────────────────────────────────────────────────
-
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
-
-/* Base */
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-    background-color: #0a0a0f;
-    color: #e2e8f0;
-}
-
-.main { background-color: #0a0a0f; }
-.block-container { padding: 1.5rem 2rem; max-width: 1400px; }
-
-/* Header */
-.dash-header {
-    font-family: 'Space Mono', monospace;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #00ff88;
-    letter-spacing: -0.02em;
-    margin-bottom: 0.2rem;
-}
-.dash-sub {
-    font-size: 0.85rem;
-    color: #64748b;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-}
-
-/* Metric cards */
-.metric-card {
-    background: #111118;
-    border: 1px solid #1e1e2e;
-    border-radius: 8px;
-    padding: 1.2rem 1.4rem;
-    position: relative;
-    overflow: hidden;
-}
-.metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #00ff88, #0ea5e9);
-}
-.metric-value {
-    font-family: 'Space Mono', monospace;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #f1f5f9;
-    line-height: 1;
-}
-.metric-label {
-    font-size: 0.75rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-top: 0.4rem;
-}
-.metric-delta {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    color: #00ff88;
-    margin-top: 0.3rem;
-}
-.metric-delta.neg { color: #f43f5e; }
-
-/* Signal badge */
-.signal-hot {
-    display: inline-block;
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #f87171;
-    font-size: 0.7rem;
-    font-family: 'Space Mono', monospace;
-    padding: 2px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.signal-pos {
-    display: inline-block;
-    background: rgba(0, 255, 136, 0.1);
-    border: 1px solid rgba(0, 255, 136, 0.25);
-    color: #00ff88;
-    font-size: 0.7rem;
-    font-family: 'Space Mono', monospace;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-.signal-neg {
-    display: inline-block;
-    background: rgba(244, 63, 94, 0.1);
-    border: 1px solid rgba(244, 63, 94, 0.25);
-    color: #f43f5e;
-    font-size: 0.7rem;
-    font-family: 'Space Mono', monospace;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-.signal-neu {
-    display: inline-block;
-    background: rgba(100, 116, 139, 0.15);
-    border: 1px solid rgba(100, 116, 139, 0.25);
-    color: #94a3b8;
-    font-size: 0.7rem;
-    font-family: 'Space Mono', monospace;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-/* Section headers */
-.section-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #475569;
-    border-bottom: 1px solid #1e1e2e;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-/* Feed items */
-.feed-item {
-    background: #111118;
-    border: 1px solid #1a1a2e;
-    border-radius: 6px;
-    padding: 0.9rem 1.1rem;
-    margin-bottom: 0.6rem;
-    transition: border-color 0.2s;
-}
-.feed-item:hover { border-color: #2d2d4a; }
-.feed-title {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #e2e8f0;
-    margin-bottom: 0.35rem;
-    line-height: 1.4;
-}
-.feed-meta {
-    font-size: 0.75rem;
-    color: #475569;
-    font-family: 'Space Mono', monospace;
-}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #0d0d15;
-    border-right: 1px solid #1a1a2e;
-}
-section[data-testid="stSidebar"] .block-container {
-    padding: 1.5rem 1rem;
-}
-
-/* Plotly dark override */
-.js-plotly-plot .plotly .modebar { background: transparent !important; }
-
-/* Streamlit overrides */"""
-Signal Engine Dashboard
-Unified intelligence dashboard for crypto + Amazon signals
-"""
-
-import streamlit as st
-import psycopg2
-import psycopg2.extras
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
 # ─── GEMINI AI ───────────────────────────────────────────────────────────────
 
 DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
@@ -276,7 +88,7 @@ def generate_insights(category=None, lang="RU"):
     if category in ("crypto", None) and not posts_df[posts_df['category']=='crypto'].empty:
         results["crypto"] = call_gemini(f"""{SYSTEM}
 
-КРИПТО ДАННЫЕ 24ч · sentiment {get_stat('crypto','avg_sentiment'):+.3f} · горячих {int(get_stat('crypto','hot_count'))}
+КРИПТО ДАННЫЕ 24ч | sentiment {get_stat('crypto','avg_sentiment'):+.3f} | горячих {int(get_stat('crypto','hot_count'))}
 
 {posts_text('crypto')}
 
@@ -290,7 +102,7 @@ def generate_insights(category=None, lang="RU"):
     if category in ("amazon", None) and not posts_df[posts_df['category']=='amazon'].empty:
         results["amazon"] = call_gemini(f"""{SYSTEM}
 
-AMAZON FBA ДАННЫЕ 24ч · sentiment {get_stat('amazon','avg_sentiment'):+.3f} · горячих {int(get_stat('amazon','hot_count'))}
+AMAZON FBA ДАННЫЕ 24ч | sentiment {get_stat('amazon','avg_sentiment'):+.3f} | горячих {int(get_stat('amazon','hot_count'))}
 
 {posts_text('amazon')}
 
