@@ -582,11 +582,16 @@ with st.sidebar:
 
     category = st.selectbox(
         "КАТЕГОРИЯ" if RU else "CATEGORY",
-        options=["all", "crypto", "amazon"],
+        options=["all", "crypto", "amazon", "geopolitics", "ai_tech", "macro", "regulations", "ecommerce"],
         format_func=lambda x: {
-            "all":    "🌐 Все рынки"      if RU else "🌐 All Markets",
-            "crypto": "₿ Крипто / Solana" if RU else "₿ Crypto / Solana",
-            "amazon": "📦 Amazon FBA"
+            "all":         "🌐 Все рынки"       if RU else "🌐 All Markets",
+            "crypto":      "₿ Крипто / Solana"  if RU else "₿ Crypto / Solana",
+            "amazon":      "📦 Amazon FBA",
+            "geopolitics": "🏛 Геополитика"      if RU else "🏛 Geopolitics",
+            "ai_tech":     "🤖 AI / Tech",
+            "macro":       "📈 Макро / Финансы"  if RU else "📈 Macro / Finance",
+            "regulations": "⚖️ Регуляции"        if RU else "⚖️ Regulations",
+            "ecommerce":   "🛒 E-commerce",
         }[x]
     )
     cat_filter = None if category == "all" else category
@@ -632,9 +637,17 @@ with st.sidebar:
 
 # ─── MAIN HEADER ─────────────────────────────────────────────────────────────
 
+# Category emoji map
+CAT_EMOJI = {
+    "all": "🌐", "crypto": "₿", "amazon": "📦",
+    "geopolitics": "🏛", "ai_tech": "🤖", "macro": "📈",
+    "regulations": "⚖️", "ecommerce": "🛒",
+}
+cat_emoji = CAT_EMOJI.get(category, "🌐")
+
 st.markdown(f"""
 <div class="dash-header">SIGNAL ENGINE</div>
-<div class="dash-sub">{category.upper()} · {days}{"Д" if RU else "D"} {"ПЕРИОД" if RU else "WINDOW"} · {datetime.now().strftime("%d %b %Y · %H:%M UTC")}</div>
+<div class="dash-sub">{cat_emoji} {category.upper()} · {days}{"Д" if RU else "D"} {"ПЕРИОД" if RU else "WINDOW"} · {datetime.now().strftime("%d %b %Y · %H:%M UTC")}</div>
 """, unsafe_allow_html=True)
 
 
@@ -642,6 +655,36 @@ st.markdown(f"""
 
 reddit_stats = load_reddit_stats(category=cat_filter, days=days)
 google_stats = load_google_stats(category=cat_filter, days=days)
+
+# ─── CATEGORY CARDS (only on "all") ──────────────────────────────────────────
+if category == "all":
+    CAT_INFO = [
+        ("₿",  "crypto",      "Крипто"       if RU else "Crypto",      "#00ff88"),
+        ("📦", "amazon",      "Amazon FBA",                             "#f59e0b"),
+        ("🏛", "geopolitics", "Геополитика"  if RU else "Geopolitics", "#f43f5e"),
+        ("🤖", "ai_tech",     "AI / Tech",                              "#a78bfa"),
+        ("📈", "macro",       "Макро"        if RU else "Macro",        "#0ea5e9"),
+        ("⚖️", "regulations", "Регуляции"    if RU else "Regulations",  "#fb923c"),
+        ("🛒", "ecommerce",   "E-commerce",                             "#34d399"),
+    ]
+    cat_cols = st.columns(7)
+    for i, (emoji, cat_key, cat_label, color) in enumerate(CAT_INFO):
+        s = load_reddit_stats(category=cat_key, days=days)
+        total = int(s['total'].iloc[0]) if not s.empty and pd.notna(s['total'].iloc[0]) else 0
+        sent  = float(s['avg_sentiment'].iloc[0]) if not s.empty and pd.notna(s['avg_sentiment'].iloc[0]) else 0
+        hot   = int(s['hot_count'].iloc[0]) if not s.empty and pd.notna(s['hot_count'].iloc[0]) else 0
+        arrow = "↑" if sent > 0.05 else "↓" if sent < -0.05 else "→"
+        with cat_cols[i]:
+            st.markdown(f"""
+            <div style="background:#111118; border:1px solid #1e1e2e; border-top:2px solid {color};
+                        border-radius:8px; padding:0.8rem; text-align:center; margin-bottom:0.5rem;">
+                <div style="font-size:1.4rem">{emoji}</div>
+                <div style="font-family:Space Mono; font-size:0.65rem; color:#64748b; margin:0.2rem 0">{cat_label.upper()}</div>
+                <div style="font-family:Space Mono; font-size:1rem; font-weight:700; color:{color}">{total}</div>
+                <div style="font-size:0.7rem; color:#475569">{arrow} {sent:+.2f} · 🔥{hot}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
