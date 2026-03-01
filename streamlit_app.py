@@ -851,9 +851,12 @@ with tab2:
             textfont=dict(family='Space Mono', size=9, color='white'),
         ))
         fig3.update_layout(
-            **CHART_THEME,
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Space Mono, monospace', color='#64748b', size=11),
+            xaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e', tickangle=-30),
+            yaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e'),
+            margin=dict(l=10, r=10, t=30, b=10),
             height=280,
-            xaxis=dict(**CHART_THEME['xaxis'], tickangle=-30),
         )
         st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
 
@@ -888,9 +891,12 @@ with tab3:
                 textfont=dict(family='Space Mono', size=9, color='white'),
             ))
             fig_kw.update_layout(
-                **CHART_THEME,
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(family='Space Mono, monospace', color='#64748b', size=11),
+                xaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e', tickangle=-40),
+                yaxis=dict(gridcolor='#1a1a2e', linecolor='#1a1a2e', tickcolor='#1a1a2e'),
+                margin=dict(l=10, r=10, t=30, b=10),
                 height=320,
-                xaxis=dict(**CHART_THEME['xaxis'], tickangle=-40),
             )
             st.plotly_chart(fig_kw, use_container_width=True, config={'displayModeBar': False})
 
