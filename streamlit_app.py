@@ -1279,7 +1279,9 @@ with tab6:
                 cat   = row['category']
                 color = CAT_COLORS.get(cat, '#64748b')
                 emoji = CAT_EMOJI.get(cat, '•')
-                with st.expander(f"{emoji} {cat.upper()} — AI сводка недели"):
+                cat_label = {"crypto":"Крипто","amazon":"Amazon FBA","geopolitics":"Геополитика",
+                              "ai_tech":"AI / Tech","macro":"Макро","regulations":"Регуляции","ecommerce":"E-commerce"}.get(cat, cat.upper())
+                with st.expander(f"{emoji} {cat_label} — AI сводка недели"):
                     st.markdown(f"""
                     <div style="font-size:0.85rem; color:#94a3b8; line-height:1.8;">
                         {row['ai_summary'].replace(chr(10), '<br>')}
