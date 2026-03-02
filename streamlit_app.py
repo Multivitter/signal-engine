@@ -740,12 +740,13 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── MAIN TABS ───────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📡 " + ("Лента" if RU else "Live Feed"),
     "📊 " + ("Аналитика" if RU else "Analytics"),
     "🔑 " + ("Ключевые слова" if RU else "Keywords"),
     "🔍 " + ("Google Интел" if RU else "Google Intel"),
     "🤖 AI " + ("Инсайты" if RU else "Insights"),
+    "📅 " + ("История" if RU else "History"),
 ])
 
 
