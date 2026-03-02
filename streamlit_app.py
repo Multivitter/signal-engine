@@ -767,6 +767,26 @@ with tab1:
         if show_negative and not feed.empty:
             feed = feed[feed['sentiment_label'] == 'negative']
 
+        # ─── ПОИСК ───────────────────────────────────────────
+        search_q = st.text_input(
+            "🔍 " + ("Поиск по ленте..." if RU else "Search feed..."),
+            value="",
+            key="feed_search",
+            label_visibility="collapsed",
+            placeholder="🔍 " + ("Поиск по теме, сабреддиту..." if RU else "Search by topic, subreddit..."),
+        )
+        if search_q:
+            mask = (
+                feed['title'].str.contains(search_q, case=False, na=False) |
+                feed['subreddit'].str.contains(search_q, case=False, na=False)
+            )
+            feed = feed[mask]
+            st.markdown(
+                f'<div style="font-family:Space Mono; font-size:0.7rem; color:#64748b; margin-bottom:0.5rem;">'
+                f'{"Найдено" if RU else "Found"}: {len(feed)} {"постов" if RU else "posts"} · "{search_q}"</div>',
+                unsafe_allow_html=True
+            )
+
         if feed.empty:
             st.markdown('<div style="color:#475569; font-size:0.85rem; padding: 2rem 0;">' + ('Нет данных. Запустите reddit_collector.py' if RU else 'No data yet. Run reddit_collector.py to populate.') + '</div>', unsafe_allow_html=True)
         else:
