@@ -790,7 +790,7 @@ with tab1:
         if feed.empty:
             st.markdown('<div style="color:#475569; font-size:0.85rem; padding: 2rem 0;">' + ('Нет данных. Запустите reddit_collector.py' if RU else 'No data yet. Run reddit_collector.py to populate.') + '</div>', unsafe_allow_html=True)
         else:
-            for _, row in feed.iterrows():
+            for i, (_, row) in enumerate(feed.iterrows()):
                 hot_badge = '<span class="signal-hot">🔥 HOT</span> ' if row.get('is_hot') else ''
                 s_badge = sentiment_badge(row.get('sentiment_label', 'neutral'))
                 meta = f"r/{row['subreddit']} · ↑{row['upvotes']:,} · 💬{row['comments_count']} · {pd.to_datetime(row['scraped_at']).strftime('%d %b %H:%M')}"
@@ -800,6 +800,27 @@ with tab1:
                     badge_html=f"{hot_badge}{s_badge}",
                     url=row.get('url')
                 )
+                # Кнопка резюме
+                summary_key = f"summary_{i}_{row.get('title','')[:20]}"
+                if st.button("💬 Резюме" if RU else "💬 Summary", key=summary_key):
+                    with st.spinner("Gemini анализирует..." if RU else "Analyzing..."):
+                        prompt = f"""Дай краткое резюме (2-3 предложения) на русском языке для этого поста с Reddit.
+Что произошло? Почему важно? Какой сигнал для рынка/трейдера/продавца?
+Будь конкретен, без воды.
+
+Заголовок: {row['title']}
+Сабреддит: r/{row['subreddit']}
+Категория: {row.get('category', '')}
+Апвоуты: {row['upvotes']:,}"""
+                        summary = call_gemini(prompt)
+                        if summary:
+                            st.markdown(f"""
+                            <div style="background:#0d1117; border-left:2px solid #00ff88;
+                                        border-radius:4px; padding:0.8rem 1rem; margin:-0.5rem 0 0.5rem 0;
+                                        font-size:0.85rem; color:#94a3b8; line-height:1.7;">
+                                🤖 {summary.strip()}
+                            </div>
+                            """, unsafe_allow_html=True)
 
     with col_b:
         st.markdown('<div class="section-title">Sentiment Mix</div>', unsafe_allow_html=True)
