@@ -1204,3 +1204,91 @@ st.markdown("""
     <span>BUILT ON POSTGRESQL · STREAMLIT · CLAUDE API</span>
 </div>
 """, unsafe_allow_html=True)
+
+with tab6:
+    st.markdown(f'<div class="section-title">{"📅 История недель" if RU else "📅 Weekly History"}</div>', unsafe_allow_html=True)
+
+    try:
+        conn_h = psycopg2.connect(DATABASE_URL)
+        history_df = pd.read_sql("""
+            SELECT week_start, week_end, category, total_posts, hot_posts,
+                   avg_sentiment, ai_summary
+            FROM weekly_summaries
+            ORDER BY week_start DESC, category
+        """, conn_h)
+        conn_h.close()
+    except:
+        history_df = pd.DataFrame()
+
+    if history_df.empty:
+        st.markdown("""
+        <div style="color:#475569; font-size:0.85rem; padding:2rem 0; text-align:center;">
+            История пока пуста.<br>
+            Запусти <code>python weekly_summary.py</code> чтобы сгенерировать первую сводку.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        weeks = sorted(history_df['week_start'].unique(), reverse=True)
+        CAT_COLORS = {
+            "crypto": "#00ff88", "amazon": "#f59e0b", "geopolitics": "#f43f5e",
+            "ai_tech": "#a78bfa", "macro": "#0ea5e9", "regulations": "#fb923c",
+            "ecommerce": "#34d399",
+        }
+        CAT_EMOJI = {
+            "crypto": "₿", "amazon": "📦", "geopolitics": "🏛",
+            "ai_tech": "🤖", "macro": "📈", "regulations": "⚖️", "ecommerce": "🛒",
+        }
+
+        for week in weeks:
+            week_data = history_df[history_df['week_start'] == week]
+            week_dt   = pd.to_datetime(week)
+            week_end  = pd.to_datetime(week_data['week_end'].iloc[0])
+
+            st.markdown(f"""
+            <div style="font-family:Space Mono; font-size:0.75rem; color:#64748b;
+                        border-bottom:1px solid #1e1e2e; padding:0.5rem 0; margin:1rem 0 0.5rem 0;">
+                📅 НЕДЕЛЯ: {week_dt.strftime('%d %b')} — {week_end.strftime('%d %b %Y')}
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Карточки категорий за неделю
+            cols = st.columns(len(week_data))
+            for i, (_, row) in enumerate(week_data.iterrows()):
+                cat   = row['category']
+                color = CAT_COLORS.get(cat, '#64748b')
+                emoji = CAT_EMOJI.get(cat, '•')
+                sent  = float(row['avg_sentiment'] or 0)
+                arrow = "↑" if sent > 0.05 else "↓" if sent < -0.05 else "→"
+                with cols[i]:
+                    st.markdown(f"""
+                    <div style="background:#111118; border:1px solid #1e1e2e;
+                                border-top:2px solid {color}; border-radius:6px;
+                                padding:0.6rem; text-align:center; margin-bottom:0.3rem;">
+                        <div style="font-size:1.1rem">{emoji}</div>
+                        <div style="font-family:Space Mono; font-size:0.6rem; color:#64748b">{cat.upper()}</div>
+                        <div style="font-family:Space Mono; font-size:0.9rem; color:{color}; font-weight:700">{int(row['total_posts'])}</div>
+                        <div style="font-size:0.65rem; color:#475569">{arrow}{sent:+.2f} 🔥{int(row['hot_posts'])}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            # AI сводки за неделю по категориям
+            for _, row in week_data.iterrows():
+                if not row['ai_summary']:
+                    continue
+                cat   = row['category']
+                color = CAT_COLORS.get(cat, '#64748b')
+                emoji = CAT_EMOJI.get(cat, '•')
+                with st.expander(f"{emoji} {cat.upper()} — AI сводка недели"):
+                    st.markdown(f"""
+                    <div style="font-size:0.85rem; color:#94a3b8; line-height:1.8;">
+                        {row['ai_summary'].replace(chr(10), '<br>')}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # Кнопка генерации
+        st.markdown("---")
+        if st.button("⚡ Сгенерировать сводку этой недели" if RU else "⚡ Generate this week's summary"):
+            with st.spinner("Gemini анализирует неделю..." if RU else "Analyzing week..."):
+                import subprocess
+                subprocess.run(["python", "weekly_summary.py"], capture_output=True)
+                st.success("✅ Готово! Обновите страницу.")
