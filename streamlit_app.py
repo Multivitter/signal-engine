@@ -1369,8 +1369,8 @@ with tab7:
                         ↗ Solscan
                     </a>
                 </div>
-                <div style="font-family:Space Mono; font-size:0.8rem; color:#94a3b8; margin:0.3rem 0;">
-                    {short_wallet}
+                <div style="font-family:Space Mono; font-size:0.75rem; color:#94a3b8; margin:0.3rem 0; word-break:break-all;">
+                    {row['wallet']}
                 </div>
                 <div style="font-size:0.75rem; color:#64748b; margin-top:0.3rem;">
                     WR: <span style="color:#e2e8f0">{row['win_rate']:.1f}%</span> &nbsp;
@@ -1378,7 +1378,7 @@ with tab7:
                     PnL: <span style="color:{pnl_color}">${row['net_pnl']:+,.0f}</span>
                 </div>
                 <div style="font-size:0.72rem; color:#475569; margin-top:0.3rem; font-style:italic;">
-                    {str(row.get('source_text',''))[:100]}
+                    {str(row.get('source_text','') or '')[:100]}
                 </div>
             </div>
             """, unsafe_allow_html=True)
