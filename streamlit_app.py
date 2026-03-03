@@ -691,6 +691,37 @@ CAT_EMOJI = {
 cat_emoji = CAT_EMOJI.get(category, "🌐")
 
 
+# ── Light theme override ──────────────────────────
+if not DARK:
+    st.markdown("""<style>
+    .stApp, .main, [data-testid="stAppViewContainer"],
+    section[data-testid="stSidebar"] {
+        background-color: #f1f5f9 !important;
+    }
+    .metric-card {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    }
+    .metric-value { color: #0f172a !important; }
+    .metric-label { color: #64748b !important; }
+    .metric-delta { color: #16a34a !important; }
+    .feed-item {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+    }
+    .feed-title  { color: #0f172a !important; }
+    .feed-meta   { color: #64748b !important; }
+    .section-title {
+        color: #334155 !important;
+        border-color: #e2e8f0 !important;
+    }
+    .dash-header { color: #0f172a !important; }
+    .dash-sub    { color: #64748b !important; }
+    .stMarkdown p, .stMarkdown span,
+    .stMarkdown div { color: #0f172a !important; }
+    </style>""", unsafe_allow_html=True)
+
 st.markdown(f"""
 <div class="dash-header">SIGNAL ENGINE</div>
 <div class="dash-sub">{cat_emoji} {category.upper()} · {days}{"Д" if RU else "D"} {"ПЕРИОД" if RU else "WINDOW"} · {datetime.now().strftime("%d %b %Y · %H:%M UTC")}</div>
