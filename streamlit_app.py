@@ -756,6 +756,20 @@ if not DARK:
     }
     /* Section title text */
     .section-title { color: #334155 !important; }
+    /* All dark inline backgrounds → white */
+    [style*="background:#0d1117"] { background: #ffffff !important; }
+    [style*="background:#111118"] { background: #ffffff !important; }
+    [style*="background:#0f172a"] { background: #f8fafc !important; }
+    [style*="background:#030712"] { background: #f8fafc !important; }
+    /* Dark text colors → readable on white */
+    [style*="color:#94a3b8"] { color: #334155 !important; }
+    [style*="color:#e2e8f0"] { color: #0f172a !important; }
+    [style*="color:#f1f5f9"] { color: #0f172a !important; }
+    [style*="color:#cbd5e1"] { color: #334155 !important; }
+    [style*="color:#1e293b"] { color: #0f172a !important; }
+    /* Feed & card borders */
+    [style*="border:1px solid #1e1e2e"] { border-color: #e2e8f0 !important; }
+    [style*="border-color:#1e2e"] { border-color: #e2e8f0 !important; }
     </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
