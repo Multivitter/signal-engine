@@ -1369,14 +1369,18 @@ with tab6:
                 sent  = float(row['avg_sentiment'] or 0)
                 arrow = "↑" if sent > 0.05 else "↓" if sent < -0.05 else "→"
                 with cols[i]:
+                    _hbg = "#111118" if DARK else "#ffffff"
+                    _hbd = "#1e1e2e" if DARK else "#e2e8f0"
+                    _hlb = "#64748b" if DARK else "#475569"
+                    _hmt = "#475569" if DARK else "#64748b"
                     st.markdown(f"""
-                    <div style="background:#111118; border:1px solid #1e1e2e;
+                    <div style="background:{_hbg}; border:1px solid {_hbd};
                                 border-top:2px solid {color}; border-radius:6px;
                                 padding:0.6rem; text-align:center; margin-bottom:0.3rem;">
                         <div style="font-size:1.1rem">{emoji}</div>
-                        <div style="font-family:Space Mono; font-size:0.6rem; color:#64748b">{cat.upper()}</div>
+                        <div style="font-family:Space Mono; font-size:0.6rem; color:{_hlb}">{cat.upper()}</div>
                         <div style="font-family:Space Mono; font-size:0.9rem; color:{color}; font-weight:700">{int(row['total_posts'])}</div>
-                        <div style="font-size:0.65rem; color:#475569">{arrow}{sent:+.2f} 🔥{int(row['hot_posts'])}</div>
+                        <div style="font-size:0.65rem; color:{_hmt}">{arrow}{sent:+.2f} 🔥{int(row['hot_posts'])}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1390,8 +1394,9 @@ with tab6:
                 cat_label = {"crypto":"Крипто","amazon":"Amazon FBA","geopolitics":"Геополитика",
                               "ai_tech":"AI / Tech","macro":"Макро","regulations":"Регуляции","ecommerce":"E-commerce"}.get(cat, cat.upper())
                 with st.expander(f"{emoji} {cat_label} — AI сводка недели"):
+                    _stc = "#94a3b8" if DARK else "#334155"
                     st.markdown(f"""
-                    <div style="font-size:0.85rem; color:#94a3b8; line-height:1.8;">
+                    <div style="font-size:0.85rem; color:{_stc}; line-height:1.8;">
                         {row['ai_summary'].replace(chr(10), '<br>')}
                     </div>
                     """, unsafe_allow_html=True)
