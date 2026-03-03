@@ -720,6 +720,26 @@ if not DARK:
     .dash-sub    { color: #64748b !important; }
     .stMarkdown p, .stMarkdown span,
     .stMarkdown div { color: #0f172a !important; }
+    /* Category cards */
+    div[style*="background:#0d1117"],
+    div[style*="background: #0d1117"],
+    div[style*="background:#0f172a"],
+    div[style*="background: #0f172a"],
+    div[style*="background:#030712"],
+    div[style*="background: #030712"] {
+        background: #ffffff !important;
+    }
+    /* All dark inline backgrounds */
+    [style*="background:#0"] { background: #ffffff !important; }
+    [style*="background: #0"] { background: #f8fafc !important; }
+    [style*="color:#94a3b8"] { color: #475569 !important; }
+    [style*="color:#64748b"] { color: #475569 !important; }
+    [style*="color:#e2e8f0"] { color: #0f172a !important; }
+    [style*="color:#f1f5f9"] { color: #0f172a !important; }
+    [style*="color:#cbd5e1"] { color: #334155 !important; }
+    [style*="color:#475569"] { color: #334155 !important; }
+    [style*="color:#1e293b"] { color: #0f172a !important; }
+    [style*="color:#0ea5e9"] { color: #0284c7 !important; }
     </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
