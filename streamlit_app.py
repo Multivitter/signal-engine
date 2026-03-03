@@ -1353,32 +1353,20 @@ with tab7:
             solscan_url = f"https://solscan.io/account/{row['wallet']}"
             short_wallet = row['wallet'][:8] + "..." + row['wallet'][-6:]
 
-            st.markdown(f"""
-            <div class="feed-item" style="border-color:{grade_color}33;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="font-family:Space Mono; font-size:0.75rem; color:{grade_color}; font-weight:700;">
-                            {grade_emoji} Grade {row['grade']} · {int(row['score'])}/100
-                        </span>
-                        <span style="font-family:Space Mono; font-size:0.7rem; color:#64748b; margin-left:1rem;">
-                            {row['trader_type']}
-                        </span>
-                    </div>
-                    <a href="{solscan_url}" target="_blank"
-                       style="font-family:Space Mono; font-size:0.65rem; color:#0ea5e9; text-decoration:none;">
-                        ↗ Solscan
-                    </a>
-                </div>
-                <div style="font-family:Space Mono; font-size:0.75rem; color:#94a3b8; margin:0.3rem 0; word-break:break-all;">
-                    {row['wallet']}
-                </div>
-                <div style="font-size:0.75rem; color:#64748b; margin-top:0.3rem;">
-                    WR: <span style="color:#e2e8f0">{row['win_rate']:.1f}%</span> &nbsp;
-                    PF: <span style="color:#e2e8f0">{row['profit_factor']:.2f}x</span> &nbsp;
-                    PnL: <span style="color:{pnl_color}">${row['net_pnl']:+,.0f}</span>
-                </div>
-                <div style="font-size:0.72rem; color:#475569; margin-top:0.3rem; font-style:italic;">
-                    {str(row.get('source_text','') or '')[:100]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="feed-item" style="border-color:{grade_color}33;">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                f'<span style="font-family:Space Mono;font-size:0.75rem;color:{grade_color};font-weight:700;">{grade_emoji} Grade {row["grade"]} · {int(row["score"])}/100</span>'
+                f'<span style="font-family:Space Mono;font-size:0.7rem;color:#64748b;margin-left:1rem;">{row["trader_type"]}</span>'
+                f'<a href="{solscan_url}" target="_blank" style="font-family:Space Mono;font-size:0.65rem;color:#0ea5e9;text-decoration:none;">↗ Solscan</a>'
+                f'</div>'
+                f'<div style="font-family:Space Mono;font-size:0.72rem;color:#94a3b8;margin:0.3rem 0;word-break:break-all;">{row["wallet"]}</div>'
+                f'<div style="font-size:0.75rem;color:#64748b;margin-top:0.3rem;">'
+                f'WR: <span style="color:#e2e8f0">{row["win_rate"]:.1f}%</span> &nbsp;'
+                f'PF: <span style="color:#e2e8f0">{row["profit_factor"]:.2f}x</span> &nbsp;'
+                f'PnL: <span style="color:{pnl_color}">${row["net_pnl"]:+,.0f}</span>'
+                f'</div>'
+                f'<div style="font-size:0.7rem;color:#475569;margin-top:0.3rem;font-style:italic;">{str(row.get("source_symbol","") or "")} · {str(row.get("source_text","") or "")[:80]}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
