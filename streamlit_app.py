@@ -1322,13 +1322,13 @@ with tab7:
 
         wc1, wc2, wc3, wc4 = st.columns(4)
         with wc1:
-            render_metric("КИТОВ В БАЗЕ", str(total_w))
+            render_metric_card(str(total_w), "КИТОВ В БАЗЕ")
         with wc2:
-            render_metric("GRADE A/B", str(grade_ab), delta=f"{grade_ab/total_w*100:.0f}%", delta_positive=True)
+            render_metric_card(str(grade_ab), "GRADE A/B", delta=f"{grade_ab/total_w*100:.0f}%", delta_positive=True)
         with wc3:
-            render_metric("AVG WIN RATE", f"{avg_wr:.1f}%", delta_positive=avg_wr > 50)
+            render_metric_card(f"{avg_wr:.1f}%", "AVG WIN RATE", delta_positive=avg_wr > 50)
         with wc4:
-            render_metric("AVG NET PNL", f"${avg_pnl:+,.0f}", delta_positive=avg_pnl > 0)
+            render_metric_card(f"${avg_pnl:+,.0f}", "AVG NET PNL", delta_positive=avg_pnl > 0)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
