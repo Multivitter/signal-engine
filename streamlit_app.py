@@ -1344,9 +1344,36 @@ with tab7:
             whales_df['grade'].map(grade_order) <= grade_order.get(grade_filter, 3)
         ]
 
+        # ─── AI ОБЩИЙ АНАЛИЗ ─────────────────────────────────────────
+        if st.button("🤖 AI анализ всех китов" if RU else "🤖 AI analyze all whales", key="whale_ai"):
+            with st.spinner("Gemini анализирует..."):
+                top_str = "\n".join([
+                    f"  [{r['grade']}] WR:{r['win_rate']:.0f}% PnL:${r['net_pnl']:+,.0f} {r['trader_type']} токен:{r.get('source_symbol','?')}"
+                    for _, r in whales_df.head(10).iterrows()
+                ])
+                prompt = f"""Ты аналитик крипто хедж-фонда. Проанализируй пул Solana китов.
+
+Всего китов: {total_w} | Grade A/B: {grade_ab} | Avg WR: {avg_wr:.1f}% | Avg PnL: ${avg_pnl:+,.0f}
+
+Топ кошельки:
+{top_str}
+
+Ответь на русском (4-5 предложений):
+## 🎯 ОБЩИЙ СИГНАЛ — что говорит активность китов
+## 🔥 ТОП ТОКЕН — в какой токен идёт smart money
+## ⚡ ДЕЙСТВИЕ — что делать трейдеру прямо сейчас"""
+                result = call_gemini(prompt)
+                if result:
+                    st.markdown(f"""
+                    <div class="feed-item" style="border-color:#00ff8833; margin-bottom:1rem;">
+                        <div style="font-family:Space Mono;font-size:0.7rem;color:#00ff88;margin-bottom:0.5rem;">🤖 AI АНАЛИЗ КИТОВ</div>
+                        <div style="font-size:0.88rem;color:#e2e8f0;line-height:1.8;">{result.replace(chr(10),"<br>")}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
         st.markdown(f'<div class="section-title">{"ТОП КОШЕЛЬКИ" if RU else "TOP WALLETS"} · {len(filtered)}</div>', unsafe_allow_html=True)
 
-        for _, row in filtered.iterrows():
+        for wi, (_, row) in enumerate(filtered.iterrows()):
             grade_color = {"A": "#00ff88", "B": "#f59e0b", "C": "#f43f5e", "F": "#475569"}.get(row['grade'], "#475569")
             grade_emoji = {"A": "🏆", "B": "👍", "C": "⚠️", "F": "🚫"}.get(row['grade'], "❓")
             pnl_color   = "#00ff88" if row['net_pnl'] > 0 else "#f43f5e"
@@ -1370,3 +1397,32 @@ with tab7:
                 f'</div>',
                 unsafe_allow_html=True
             )
+            # AI анализ кошелька
+            whale_btn_key = f"whale_ai_{wi}_{row['wallet'][:8]}"
+            if st.button("🤖 Анализ — следить?", key=whale_btn_key):
+                with st.spinner("Gemini анализирует кошелёк..."):
+                    w_prompt = f"""Ты крипто аналитик. Дай чёткий совет по этому Solana кошельку.
+
+Кошелёк: {row['wallet']}
+Grade: {row['grade']} ({int(row['score'])}/100)
+Win Rate: {row['win_rate']:.1f}%
+Profit Factor: {row['profit_factor']:.2f}x
+Net PnL (30д): ${row['net_pnl']:+,.0f}
+Тип трейдера: {row['trader_type']}
+Токен через который нашли: {str(row.get('source_symbol','')) or 'N/A'}
+
+Ответь структурированно на русском:
+1. СЛЕДИТЬ ИЛИ НЕТ — чёткий ответ да/нет и почему
+2. СТИЛЬ — как торгует, что покупает
+3. РИСК — главные риски копирования
+4. РЕКОМЕНДАЦИЯ — конкретное действие"""
+                    w_analysis = call_gemini(w_prompt)
+                    if w_analysis:
+                        txt = w_analysis.strip().replace("\n", "<br>")
+                        st.markdown(
+                            f'<div style="background:#0d1117;border-left:2px solid {grade_color};'
+                            f'border-radius:4px;padding:0.8rem 1rem;margin:0.3rem 0 0.8rem 0;'
+                            f'font-size:0.85rem;color:#94a3b8;line-height:1.8;">'
+                            f'🤖 {txt}</div>',
+                            unsafe_allow_html=True
+                        )
