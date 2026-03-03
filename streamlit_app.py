@@ -740,6 +740,22 @@ if not DARK:
     [style*="color:#475569"] { color: #334155 !important; }
     [style*="color:#1e293b"] { color: #0f172a !important; }
     [style*="color:#0ea5e9"] { color: #0284c7 !important; }
+    /* Tabs */
+    .stTabs [data-baseweb="tab"] {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        color: #475569 !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #f0fdf4 !important;
+        border-color: #16a34a !important;
+        color: #16a34a !important;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        background: #16a34a !important;
+    }
+    /* Section title text */
+    .section-title { color: #334155 !important; }
     </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
