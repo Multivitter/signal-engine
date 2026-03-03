@@ -765,6 +765,12 @@ if category == "all":
         ("🛒", "ecommerce",   "E-commerce",                             "#34d399"),
     ]
     cat_cols = st.columns(7)
+    # Theme-aware colors for category cards
+    _card_bg    = "#111118" if DARK else "#ffffff"
+    _card_brd   = "#1e1e2e" if DARK else "#e2e8f0"
+    _label_clr  = "#64748b" if DARK else "#475569"
+    _meta_clr   = "#475569" if DARK else "#64748b"
+
     for i, (emoji, cat_key, cat_label, color) in enumerate(CAT_INFO):
         s = load_reddit_stats(category=cat_key, days=days)
         total = int(s['total'].iloc[0]) if not s.empty and pd.notna(s['total'].iloc[0]) else 0
@@ -773,12 +779,12 @@ if category == "all":
         arrow = "↑" if sent > 0.05 else "↓" if sent < -0.05 else "→"
         with cat_cols[i]:
             st.markdown(f"""
-            <div style="background:#111118; border:1px solid #1e1e2e; border-top:2px solid {color};
+            <div style="background:{_card_bg}; border:1px solid {_card_brd}; border-top:2px solid {color};
                         border-radius:8px; padding:0.8rem; text-align:center; margin-bottom:0.5rem;">
                 <div style="font-size:1.4rem">{emoji}</div>
-                <div style="font-family:Space Mono; font-size:0.65rem; color:#64748b; margin:0.2rem 0">{cat_label.upper()}</div>
+                <div style="font-family:Space Mono; font-size:0.65rem; color:{_label_clr}; margin:0.2rem 0">{cat_label.upper()}</div>
                 <div style="font-family:Space Mono; font-size:1rem; font-weight:700; color:{color}">{total}</div>
-                <div style="font-size:0.7rem; color:#475569">{arrow} {sent:+.2f} · 🔥{hot}</div>
+                <div style="font-size:0.7rem; color:{_meta_clr}">{arrow} {sent:+.2f} · 🔥{hot}</div>
             </div>
             """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
