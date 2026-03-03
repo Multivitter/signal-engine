@@ -621,6 +621,7 @@ with st.sidebar:
 
     lang = st.radio("🌐", ["RU", "EN"], horizontal=True, index=0)
     RU = lang == "RU"
+    DARK = st.toggle("🌙 Dark mode", value=True, key="theme_dark")
 
     st.markdown("---")
 
@@ -689,14 +690,6 @@ CAT_EMOJI = {
 }
 cat_emoji = CAT_EMOJI.get(category, "🌐")
 
-if not DARK:
-    st.markdown("""<style>
-    .stApp, .main, section[data-testid="stSidebar"] { background:#f8fafc !important; }
-    .metric-card { background:#fff !important; border-color:#e2e8f0 !important; }
-    .metric-value, .feed-title, .dash-header { color:#0f172a !important; }
-    .metric-label, .feed-meta, .dash-sub, .section-title { color:#475569 !important; }
-    .feed-item { background:#fff !important; border-color:#e2e8f0 !important; }
-    </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="dash-header">SIGNAL ENGINE</div>
