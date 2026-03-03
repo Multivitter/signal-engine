@@ -740,13 +740,14 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── MAIN TABS ───────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📡 " + ("Лента" if RU else "Live Feed"),
     "📊 " + ("Аналитика" if RU else "Analytics"),
     "🔑 " + ("Ключевые слова" if RU else "Keywords"),
     "🔍 " + ("Google Интел" if RU else "Google Intel"),
     "🤖 AI " + ("Инсайты" if RU else "Insights"),
     "📅 " + ("История" if RU else "History"),
+    "🐋 " + ("Киты" if RU else "Whales"),
 ])
 
 
@@ -1287,3 +1288,97 @@ with tab6:
                         {row['ai_summary'].replace(chr(10), '<br>')}
                     </div>
                     """, unsafe_allow_html=True)
+
+with tab7:
+    st.markdown(f'<div class="section-title">{"🐋 Whale Tracker — Solana" if RU else "🐋 Whale Tracker — Solana"}</div>', unsafe_allow_html=True)
+
+    try:
+        conn_w = psycopg2.connect(DATABASE_URL)
+        whales_df = pd.read_sql("""
+            SELECT wallet, grade, score, win_rate, profit_factor,
+                   net_pnl, trader_type, verdict, source_text,
+                   analyzed_at
+            FROM whale_wallets
+            ORDER BY score DESC
+            LIMIT 50
+        """, conn_w)
+        conn_w.close()
+    except:
+        whales_df = pd.DataFrame()
+
+    if whales_df.empty:
+        st.markdown("""
+        <div style="color:#475569; font-size:0.85rem; padding:2rem 0; text-align:center;">
+            Данных нет.<br>
+            Запусти <code>python whale_tracker.py</code> для поиска китов.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Метрики
+        total_w   = len(whales_df)
+        grade_ab  = len(whales_df[whales_df['grade'].isin(['A','B'])])
+        avg_wr    = whales_df['win_rate'].mean()
+        avg_pnl   = whales_df['net_pnl'].mean()
+
+        wc1, wc2, wc3, wc4 = st.columns(4)
+        with wc1:
+            render_metric("КИТОВ В БАЗЕ", str(total_w))
+        with wc2:
+            render_metric("GRADE A/B", str(grade_ab), delta=f"{grade_ab/total_w*100:.0f}%", delta_positive=True)
+        with wc3:
+            render_metric("AVG WIN RATE", f"{avg_wr:.1f}%", delta_positive=avg_wr > 50)
+        with wc4:
+            render_metric("AVG NET PNL", f"${avg_pnl:+,.0f}", delta_positive=avg_pnl > 0)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Фильтр по грейду
+        grade_filter = st.select_slider(
+            "Минимальный грейд" if RU else "Min Grade",
+            options=["F", "C", "B", "A"],
+            value="B",
+            key="whale_grade_filter"
+        )
+        grade_order = {"A": 0, "B": 1, "C": 2, "F": 3}
+        filtered = whales_df[
+            whales_df['grade'].map(grade_order) <= grade_order.get(grade_filter, 3)
+        ]
+
+        st.markdown(f'<div class="section-title">{"ТОП КОШЕЛЬКИ" if RU else "TOP WALLETS"} · {len(filtered)}</div>', unsafe_allow_html=True)
+
+        for _, row in filtered.iterrows():
+            grade_color = {"A": "#00ff88", "B": "#f59e0b", "C": "#f43f5e", "F": "#475569"}.get(row['grade'], "#475569")
+            grade_emoji = {"A": "🏆", "B": "👍", "C": "⚠️", "F": "🚫"}.get(row['grade'], "❓")
+            pnl_color   = "#00ff88" if row['net_pnl'] > 0 else "#f43f5e"
+            solscan_url = f"https://solscan.io/account/{row['wallet']}"
+            short_wallet = row['wallet'][:8] + "..." + row['wallet'][-6:]
+
+            st.markdown(f"""
+            <div class="feed-item" style="border-color:{grade_color}33;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="font-family:Space Mono; font-size:0.75rem; color:{grade_color}; font-weight:700;">
+                            {grade_emoji} Grade {row['grade']} · {int(row['score'])}/100
+                        </span>
+                        <span style="font-family:Space Mono; font-size:0.7rem; color:#64748b; margin-left:1rem;">
+                            {row['trader_type']}
+                        </span>
+                    </div>
+                    <a href="{solscan_url}" target="_blank"
+                       style="font-family:Space Mono; font-size:0.65rem; color:#0ea5e9; text-decoration:none;">
+                        ↗ Solscan
+                    </a>
+                </div>
+                <div style="font-family:Space Mono; font-size:0.8rem; color:#94a3b8; margin:0.3rem 0;">
+                    {short_wallet}
+                </div>
+                <div style="font-size:0.75rem; color:#64748b; margin-top:0.3rem;">
+                    WR: <span style="color:#e2e8f0">{row['win_rate']:.1f}%</span> &nbsp;
+                    PF: <span style="color:#e2e8f0">{row['profit_factor']:.2f}x</span> &nbsp;
+                    PnL: <span style="color:{pnl_color}">${row['net_pnl']:+,.0f}</span>
+                </div>
+                <div style="font-size:0.72rem; color:#475569; margin-top:0.3rem; font-style:italic;">
+                    {str(row.get('source_text',''))[:100]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
