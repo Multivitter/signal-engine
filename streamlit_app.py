@@ -689,35 +689,14 @@ CAT_EMOJI = {
 }
 cat_emoji = CAT_EMOJI.get(category, "🌐")
 
-# Apply theme
-theme_class = "" if DARK else "light-theme"
-st.markdown(f"""
-<script>
-document.body.className = "{theme_class}";
-document.querySelector('.stApp').className += " {theme_class}";
-</script>
-""", unsafe_allow_html=True)
-
-# Override bg for light mode via st.markdown injection
 if not DARK:
-    st.markdown("""
-    <style>
-    .stApp, section[data-testid="stSidebar"], .main {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
-    }
-    .metric-card { background: #ffffff !important; border-color:#e2e8f0 !important; }
-    .metric-value { color: #0f172a !important; }
-    .metric-label { color: #475569 !important; }
-    .feed-item { background: #ffffff !important; border-color:#e2e8f0 !important; }
-    .feed-title { color: #0f172a !important; }
-    .feed-meta  { color: #64748b !important; }
-    .section-title { color: #475569 !important; border-color:#e2e8f0 !important; }
-    .dash-header { color: #0f172a !important; }
-    .dash-sub    { color: #475569 !important; }
-    p, span, div, label { color: #0f172a !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("""<style>
+    .stApp, .main, section[data-testid="stSidebar"] { background:#f8fafc !important; }
+    .metric-card { background:#fff !important; border-color:#e2e8f0 !important; }
+    .metric-value, .feed-title, .dash-header { color:#0f172a !important; }
+    .metric-label, .feed-meta, .dash-sub, .section-title { color:#475569 !important; }
+    .feed-item { background:#fff !important; border-color:#e2e8f0 !important; }
+    </style>""", unsafe_allow_html=True)
 
 st.markdown(f"""
 <div class="dash-header">SIGNAL ENGINE</div>
