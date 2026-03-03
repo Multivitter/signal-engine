@@ -1287,11 +1287,3 @@ with tab6:
                         {row['ai_summary'].replace(chr(10), '<br>')}
                     </div>
                     """, unsafe_allow_html=True)
-
-        # Кнопка генерации
-        st.markdown("---")
-        if st.button("⚡ Сгенерировать сводку этой недели" if RU else "⚡ Generate this week's summary"):
-            with st.spinner("Gemini анализирует неделю..." if RU else "Analyzing week..."):
-                import subprocess
-                subprocess.run(["python", "weekly_summary.py"], capture_output=True)
-                st.success("✅ Готово! Обновите страницу.")
