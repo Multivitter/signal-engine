@@ -7,7 +7,7 @@ import streamlit as st
 import psycopg2
 import time
 import psycopg2
-import time.extras
+import time
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
