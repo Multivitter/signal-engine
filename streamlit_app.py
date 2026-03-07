@@ -1554,6 +1554,7 @@ with tab7:
                 f'PnL: <span style="color:{pnl_color}">${row["net_pnl"]:+,.0f}</span>'
                 f'</div>'
                 f'<div style="font-size:0.7rem;color:#475569;margin-top:0.3rem;font-style:italic;">{str(row.get("source_symbol","") or "")} · {str(row.get("source_text","") or "")[:80]}</div>'
+                f'<div style="font-size:0.68rem;color:#334155;margin-top:0.2rem;">📅 Найден: {str(row["analyzed_at"])[:16] if row.get("analyzed_at") else "—"}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
