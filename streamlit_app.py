@@ -6,8 +6,10 @@ Unified intelligence dashboard for crypto + Amazon signals
 import streamlit as st
 import psycopg2
 import time
+from sqlalchemy import create_engine, text
 import psycopg2
 import time
+from sqlalchemy import create_engine, text
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -45,7 +47,10 @@ def call_gemini(prompt: str) -> str:
 
 
 def generate_insights(category=None, lang="RU", days=7):
-    conn_ins = psycopg2.connect(DATABASE_URL)
+    engine = get_engine()
+    conn_ins = engine.connect() if engine else None
+    if not conn_ins:
+        return {"error": "Нет подключения к БД"}
 
     where = f"WHERE scraped_at >= NOW() - INTERVAL '{days} days'"
     if category:
@@ -70,7 +75,7 @@ def generate_insights(category=None, lang="RU", days=7):
         FROM reddit_posts {where}
         GROUP BY category
     """, conn_ins)
-    conn_ins.close()
+    if conn_ins: conn_ins.close()
 
     if posts_df.empty:
         return {"error": "Нет данных для анализа" if lang == "RU" else "No data"}
@@ -395,45 +400,34 @@ body.light-theme, .light-theme .stApp {
 # ─── DATABASE ────────────────────────────────────────────────────────────────
 
 @st.cache_resource
+@st.cache_resource
+def get_engine():
+    database_url = (
+        os.getenv("DATABASE_URL") or
+        st.secrets.get("DATABASE_URL", "") or
+        st.secrets.get("database", {}).get("DATABASE_URL", "")
+    )
+    if not database_url:
+        return None
+    # SQLAlchemy нужен postgresql:// не postgres://
+    url = database_url.replace("postgres://", "postgresql://", 1)
+    return create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=3)
+
 def get_connection():
-    for attempt in range(3):
-        try:
-            database_url = (
-                os.getenv("DATABASE_URL") or
-                st.secrets.get("DATABASE_URL", "") or
-                st.secrets.get("database", {}).get("DATABASE_URL", "")
-            )
-            if not database_url:
-                return None
-            conn = psycopg2.connect(database_url, connect_timeout=10)
-            conn.autocommit = False
-            return conn
-        except Exception as e:
-            if attempt == 2:
-                return None
-            time.sleep(1)
-    return None
+    return get_engine()
 
 
 def query(sql, params=None):
-    for attempt in range(3):
-        conn = get_connection()
-        if not conn:
-            return pd.DataFrame()
-        try:
-            df = pd.read_sql(sql, conn, params=params)
-            conn.close()
-            return df
-        except Exception as e:
-            try:
-                conn.close()
-            except:
-                pass
-            if attempt == 2:
-                st.error(f"DB error: {e}")
-                return pd.DataFrame()
-            time.sleep(1)
-    return pd.DataFrame()
+    engine = get_engine()
+    if engine is None:
+        st.error("DB: нет DATABASE_URL")
+        return pd.DataFrame()
+    try:
+        with engine.connect() as conn:
+            return pd.read_sql(text(sql), conn, params=params)
+    except Exception as e:
+        st.error(f"DB error: {e}")
+        return pd.DataFrame()
 
 
 # ─── DATA LOADERS ────────────────────────────────────────────────────────────
@@ -1337,14 +1331,14 @@ with tab6:
     st.markdown(f'<div class="section-title">{"📅 История недель" if RU else "📅 Weekly History"}</div>', unsafe_allow_html=True)
 
     try:
-        conn_h = psycopg2.connect(DATABASE_URL)
+        conn_h = get_engine().connect()
         history_df = pd.read_sql("""
             SELECT week_start, week_end, category, total_posts, hot_posts,
                    avg_sentiment, ai_summary
             FROM weekly_summaries
             ORDER BY week_start DESC, category
         """, conn_h)
-        conn_h.close()
+        if conn_h: conn_h.close()
     except:
         history_df = pd.DataFrame()
 
@@ -1424,7 +1418,7 @@ with tab7:
     st.markdown(f'<div class="section-title">{"🐋 Whale Tracker — Solana" if RU else "🐋 Whale Tracker — Solana"}</div>', unsafe_allow_html=True)
 
     try:
-        conn_w = psycopg2.connect(DATABASE_URL)
+        conn_w = get_engine().connect()
         whales_df = pd.read_sql("""
             SELECT wallet, grade, score, win_rate, profit_factor,
                    net_pnl, trader_type, verdict, source_text,
@@ -1433,7 +1427,7 @@ with tab7:
             ORDER BY score DESC
             LIMIT 50
         """, conn_w)
-        conn_w.close()
+        if conn_w: conn_w.close()
     except:
         whales_df = pd.DataFrame()
 
