@@ -51,6 +51,61 @@ def generate_insights(category=None, lang="RU"):
 
     posts_df = pd.read_sql(f"""
         SELECT subreddit, category, title, upvotes,
+               sentiment_label, sentiment_score, is_hot,"""
+Signal Engine Dashboard
+Unified intelligence dashboard for crypto + Amazon signals
+"""
+
+import streamlit as st
+import psycopg2
+import time
+import psycopg2
+import time.extras
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ─── GEMINI AI ───────────────────────────────────────────────────────────────
+
+DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite") or st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
+def call_gemini(prompt: str) -> str:
+    import requests as _req
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    try:
+        r = _req.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            params={"key": GEMINI_API_KEY},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+            },
+            timeout=30
+        )
+        if r.status_code == 200:
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return f"Gemini error {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def generate_insights(category=None, lang="RU"):
+    conn_ins = psycopg2.connect(DATABASE_URL)
+
+    where = "WHERE scraped_at >= NOW() - INTERVAL '24 hours'"
+    if category:
+        where += f" AND category = '{category}'"
+
+    posts_df = pd.read_sql(f"""
+        SELECT subreddit, category, title, upvotes,
                sentiment_label, sentiment_score, is_hot,
                COALESCE(ai_summary, '') as ai_summary,
                post_url as url, scraped_at
@@ -391,24 +446,37 @@ body.light-theme, .light-theme .stApp {
 
 @st.cache_resource
 def get_connection():
-    try:
-        database_url = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
-        conn = psycopg2.connect(database_url)
-        return conn
-    except Exception as e:
-        st.error(f"DB connection error: {e}")
-        return None
+    for attempt in range(3):
+        try:
+            database_url = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+            conn = psycopg2.connect(database_url, connect_timeout=10)
+            conn.autocommit = False
+            return conn
+        except Exception as e:
+            if attempt == 2:
+                return None
+            time.sleep(1)
+    return None
 
 
 def query(sql, params=None):
-    conn = get_connection()
-    if not conn:
-        return pd.DataFrame()
-    try:
-        return pd.read_sql(sql, conn, params=params)
-    except Exception as e:
-        st.error(f"DB error: {e}")
-        return pd.DataFrame()
+    for attempt in range(3):
+        conn = get_connection()
+        if not conn:
+            return pd.DataFrame()
+        try:
+            df = pd.read_sql(sql, conn, params=params)
+            conn.close()
+            return df
+        except Exception as e:
+            try:
+                conn.close()
+            except:
+                pass
+            if attempt == 2:
+                return pd.DataFrame()
+            time.sleep(1)
+    return pd.DataFrame()
 
 
 # ─── DATA LOADERS ────────────────────────────────────────────────────────────
