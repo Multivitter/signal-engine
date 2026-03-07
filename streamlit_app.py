@@ -51,7 +51,9 @@ def generate_insights(category=None, lang="RU"):
 
     posts_df = pd.read_sql(f"""
         SELECT subreddit, category, title, upvotes,
-               sentiment_label, sentiment_score, is_hot
+               sentiment_label, sentiment_score, is_hot,
+               COALESCE(ai_summary, '') as ai_summary,
+               post_url as url, scraped_at
         FROM reddit_posts {where}
         ORDER BY upvotes DESC LIMIT 40
     """, conn_ins)
@@ -909,27 +911,18 @@ with tab1:
                     badge_html=f"{hot_badge}{s_badge}",
                     url=row.get('url')
                 )
-                # Кнопка резюме
-                summary_key = f"summary_{i}_{row.get('title','')[:20]}"
-                if st.button("💬 Резюме" if RU else "💬 Summary", key=summary_key):
-                    with st.spinner("Gemini анализирует..." if RU else "Analyzing..."):
-                        prompt = f"""Дай краткое резюме (2-3 предложения) на русском языке для этого поста с Reddit.
-Что произошло? Почему важно? Какой сигнал для рынка/трейдера/продавца?
-Будь конкретен, без воды.
-
-Заголовок: {row['title']}
-Сабреддит: r/{row['subreddit']}
-Категория: {row.get('category', '')}
-Апвоуты: {row['upvotes']:,}"""
-                        summary = call_gemini(prompt)
-                        if summary:
-                            st.markdown(f"""
-                            <div style="background:#0d1117; border-left:2px solid #00ff88;
-                                        border-radius:4px; padding:0.8rem 1rem; margin:-0.5rem 0 0.5rem 0;
-                                        font-size:0.85rem; color:#94a3b8; line-height:1.7;">
-                                🤖 {summary.strip()}
-                            </div>
-                            """, unsafe_allow_html=True)
+                # Авто-резюме из базы
+                ai_text = str(row.get('ai_summary') or '').strip()
+                if ai_text:
+                    _sbg = "#0d1117" if DARK else "#f0fdf4"
+                    _stc = "#94a3b8" if DARK else "#334155"
+                    st.markdown(
+                        f'<div style="background:{_sbg};border-left:2px solid #00ff88;'
+                        f'border-radius:4px;padding:0.6rem 1rem;margin:-0.3rem 0 0.5rem 0;'
+                        f'font-size:0.82rem;color:{_stc};line-height:1.6;">'
+                        f'🤖 {ai_text}</div>',
+                        unsafe_allow_html=True
+                    )
 
     with col_b:
         st.markdown('<div class="section-title">Sentiment Mix</div>', unsafe_allow_html=True)
