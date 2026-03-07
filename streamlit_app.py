@@ -31,44 +31,50 @@ def _get_gemini_keys():
 
 GEMINI_KEYS    = _get_gemini_keys()
 GEMINI_API_KEY = GEMINI_KEYS[0]
-GEMINI_MODEL_DEFAULT = os.getenv("GEMINI_MODEL", "gemini-1.5-flash-8b") or st.secrets.get("GEMINI_MODEL", "gemini-1.5-flash-8b")
-GEMINI_MODELS_LIST = [
-    "gemini-1.5-flash-8b",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-1.5-flash",
-    "gemini-3-flash-preview",
-    "gemini-3.1-flash-lite-preview",
-]
+# Список моделей из Secrets (через запятую) или дефолтный
+_models_str = (
+    os.getenv("GEMINI_MODELS") or
+    st.secrets.get("GEMINI_MODELS", "") or
+    "gemini-1.5-flash-8b,gemini-2.0-flash-lite,gemini-2.0-flash,gemini-2.5-flash-lite,gemini-2.5-flash"
+)
+GEMINI_MODELS_LIST = [m.strip() for m in _models_str.split(",") if m.strip()]
+GEMINI_MODEL_DEFAULT = (
+    os.getenv("GEMINI_MODEL") or
+    st.secrets.get("GEMINI_MODEL", "") or
+    GEMINI_MODELS_LIST[0]
+)
+SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce аналитик уровня хедж-фонда. Анализируешь социальные сигналы из Reddit. Отвечай структурированно, конкретно, без воды."
 
-def call_gemini(prompt: str) -> str:
+def call_gemini(prompt: str, model_override: str = None) -> str:
     import requests as _req
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    for key in GEMINI_KEYS:
-        try:
-            r = _req.post(
-                url,
-                headers={"Content-Type": "application/json"},
-                params={"key": key},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-                },
-                timeout=30
-            )
-            if r.status_code == 200:
-                return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            if r.status_code == 429:
-                continue  # попробуем следующий ключ
-            return f"Gemini error {r.status_code}: {r.text[:200]}"
-        except Exception as e:
-            continue
-    return "⚠️ Все Gemini ключи исчерпали лимит. Добавьте новые ключи в Secrets."
+    # Пробуем выбранную модель, потом остальные из списка
+    chosen = model_override or GEMINI_MODEL
+    models_to_try = [chosen] + [m for m in GEMINI_MODELS_LIST if m != chosen]
+
+    for model in models_to_try:
+        for key in GEMINI_KEYS:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                r = _req.post(
+                    url,
+                    headers={"Content-Type": "application/json"},
+                    params={"key": key},
+                    json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+                    },
+                    timeout=30
+                )
+                if r.status_code == 200:
+                    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                if r.status_code == 429:
+                    continue  # следующий ключ или модель
+            except Exception:
+                continue
+    return "⚠️ Все модели и ключи исчерпали лимит 429."
 
 
-def generate_insights(category=None, lang="RU", days=7):
+def generate_insights(category=None, lang="RU", days=7, model=None):
     engine = get_engine()
     conn_ins = engine.connect() if engine else None
     if not conn_ins:
@@ -105,7 +111,7 @@ def generate_insights(category=None, lang="RU", days=7):
     results = {"generated_at": datetime.now().strftime("%d %b %Y · %H:%M UTC"),
                "posts_analyzed": len(posts_df)}
 
-    SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce аналитик уровня хедж-фонда. Анализируешь социальные сигналы из Reddit. Отвечай структурированно, конкретно, без воды."
+
 
     def posts_text(cat):
         df = posts_df[posts_df['category'] == cat].head(15)
@@ -168,7 +174,7 @@ def generate_insights(category=None, lang="RU", days=7):
 {data_str}
 
 Структура ответа:
-{structure}""")
+{structure}""", model_override=model)
 
     if category is None:
         hot = posts_df[posts_df['is_hot']==True].head(10)
@@ -190,7 +196,7 @@ def generate_insights(category=None, lang="RU", days=7):
             "## 📦 AMAZON: ДЕЙСТВИЕ\n"
             "## 🎯 ИТОГ"
         )
-        results["summary"] = call_gemini(prompt)
+        results["summary"] = call_gemini(prompt, model_override=model)
 
     return results
 
@@ -1256,12 +1262,12 @@ with tab5:
     col_ai1, col_ai2 = st.columns([2, 1])
 
     with col_ai2:
-        st.markdown(f"""
-        <div class="metric-card" style="margin-bottom:1rem">
-            <div class="metric-label">{"МОДЕЛЬ" if RU else "MODEL"}</div>
-            <div style="font-family: Space Mono; font-size:0.85rem; color:#00ff88; margin-top:0.3rem">gemini-1.5-flash-8b</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-label" style="font-size:0.7rem;letter-spacing:.08em;color:#64748b;margin-bottom:0.3rem">{"🤖 МОДЕЛЬ" if RU else "🤖 MODEL"}</div>', unsafe_allow_html=True)
+        _midx = GEMINI_MODELS_LIST.index(st.session_state.gemini_model) if st.session_state.gemini_model in GEMINI_MODELS_LIST else 0
+        _sel = st.selectbox("model_sel", GEMINI_MODELS_LIST, index=_midx, label_visibility="collapsed", key="model_select_ai")
+        if _sel != st.session_state.gemini_model:
+            st.session_state.gemini_model = _sel
+        GEMINI_MODEL = _sel
 
         ai_category = st.selectbox(
             "Анализировать" if RU else "Analyze",
@@ -1295,7 +1301,7 @@ with tab5:
         if generate_btn:
             cat_param = None if ai_category == "all" else ai_category
             with st.spinner("🤖 " + ("Анализирую сигналы..." if RU else "Analyzing signals...")):
-                insights = generate_insights(category=cat_param, lang=lang, days=days)
+                insights = generate_insights(category=cat_param, lang=lang, days=days, model=st.session_state.get("gemini_model", GEMINI_MODEL_DEFAULT))
 
             if "error" in insights:
                 st.error(insights["error"])
