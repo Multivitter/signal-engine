@@ -209,6 +209,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Session state init
+if "gemini_model" not in st.session_state:
+    st.session_state.gemini_model = GEMINI_MODEL_DEFAULT
+
 # ─── CUSTOM CSS ──────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -1262,12 +1266,15 @@ with tab5:
     col_ai1, col_ai2 = st.columns([2, 1])
 
     with col_ai2:
-        st.markdown(f'<div class="metric-label" style="font-size:0.7rem;letter-spacing:.08em;color:#64748b;margin-bottom:0.3rem">{"🤖 МОДЕЛЬ" if RU else "🤖 MODEL"}</div>', unsafe_allow_html=True)
         _midx = GEMINI_MODELS_LIST.index(st.session_state.gemini_model) if st.session_state.gemini_model in GEMINI_MODELS_LIST else 0
-        _sel = st.selectbox("model_sel", GEMINI_MODELS_LIST, index=_midx, label_visibility="collapsed", key="model_select_ai")
+        _sel = st.selectbox(
+            "🤖 Модель" if RU else "🤖 Model",
+            GEMINI_MODELS_LIST,
+            index=_midx,
+            key="model_select_ai"
+        )
         if _sel != st.session_state.gemini_model:
             st.session_state.gemini_model = _sel
-        GEMINI_MODEL = _sel
 
         ai_category = st.selectbox(
             "Анализировать" if RU else "Analyze",
