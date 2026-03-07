@@ -43,7 +43,7 @@ GEMINI_MODEL_DEFAULT = (
     st.secrets.get("GEMINI_MODEL", "") or
     GEMINI_MODELS_LIST[0]
 )
-SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce аналитик уровня хедж-фонда. Анализируешь социальные сигналы из Reddit. Отвечай структурированно, конкретно, без воды."
+SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce аналитик уровня хедж-фонда. Анализируешь социальные сигналы из Reddit. Отвечай структурированно, конкретно, без воды. Не используй markdown символы ## и ** в ответе."
 
 def call_gemini(prompt: str, model_override: str = None) -> str:
     import requests as _req
