@@ -1,9 +1,9 @@
-import re
+
 """
 Signal Engine Dashboard
 Unified intelligence dashboard for crypto + Amazon signals
 """
-
+import re
 import streamlit as st
 import psycopg2
 import time
@@ -967,6 +967,22 @@ with tab1:
         if feed.empty:
             st.markdown('<div style="color:#475569; font-size:0.85rem; padding: 2rem 0;">' + ('Нет данных. Запустите reddit_collector.py' if RU else 'No data yet. Run reddit_collector.py to populate.') + '</div>', unsafe_allow_html=True)
         else:
+            _junk_patterns = [
+                r"Вот краткое резюме[^:]*:\s*\n?",
+                r"Краткое резюме[^:]*:\s*\n?",
+                r"\*\*Краткое резюме\*\*[^:]*:\s*\n?",
+                r"\*\*[^*]+\*\*:?\s*",
+                r"\*\*(.*?)\*\*",
+            ]
+            def clean_summary(txt):
+                txt = str(txt or '').strip()
+                for p in _junk_patterns:
+                    txt = re.sub(p, '', txt, flags=re.IGNORECASE).strip()
+                return txt
+
+            _sbg = "#0d1117" if DARK else "#f0fdf4"
+            _stc = "#94a3b8" if DARK else "#334155"
+
             for i, (_, row) in enumerate(feed.iterrows()):
                 hot_badge = '<span class="signal-hot">🔥 HOT</span> ' if row.get('is_hot') else ''
                 s_badge = sentiment_badge(row.get('sentiment_label', 'neutral'))
@@ -977,21 +993,17 @@ with tab1:
                     badge_html=f"{hot_badge}{s_badge}",
                     url=row.get('url')
                 )
-                # Авто-резюме из базы
-                ai_text = str(row.get('ai_summary') or '').strip()
-                for _junk in [r"Вот краткое резюме[^:]*:\s*\n?", r"Краткое резюме[^:]*:\s*\n?", r"\*\*Краткое резюме\*\*[^:]*:\s*\n?", r"\*\*(.*?)\*\*"]:
-                    ai_text = re.sub(_junk, "", ai_text, flags=re.IGNORECASE).strip()
-                # Чистим мусорные фразы из старых резюме
-                for _junk in [
-                    r'Вот краткое резюме[^:]*:\s*\n?',
-                    r'Краткое резюме[^:]*:\s*\n?',
-                    r'\*\*[^*]+\*\*:?\s*',
-                    r'\*\*(.*?)\*\*',
-                ]:
-                    ai_text = re.sub(_junk, '', ai_text, flags=re.IGNORECASE).strip()
+                ai_text = clean_summary(row.get('ai_summary', ''))
+                # Если резюме нет — генерим на лету для первых 10
+                if not ai_text and i < 10:
+                    _prompt = (
+                        f"2 предложения на русском. Без вступлений, без markdown.\n"
+                        f"1) Что произошло. 2) Сигнал для рынка/бизнеса.\n\n"
+                        f"Пост: {row['title']}\n"
+                        f"r/{row['subreddit']} | {row.get('upvotes',0):,} апвоутов"
+                    )
+                    ai_text = clean_summary(call_gemini(_prompt))
                 if ai_text:
-                    _sbg = "#0d1117" if DARK else "#f0fdf4"
-                    _stc = "#94a3b8" if DARK else "#334155"
                     st.markdown(
                         f'<div style="background:{_sbg};border-left:2px solid #00ff88;'
                         f'border-radius:4px;padding:0.6rem 1rem;margin:-0.3rem 0 0.5rem 0;'
