@@ -212,6 +212,8 @@ st.set_page_config(
 # Session state init
 if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = GEMINI_MODEL_DEFAULT
+if "selected_cat" not in st.session_state:
+    st.session_state.selected_cat = None
 
 # ─── CUSTOM CSS ──────────────────────────────────────────────────────────────
 
@@ -694,6 +696,11 @@ with st.sidebar:
         }[x]
     )
     cat_filter = None if category == "all" else category
+    if st.session_state.get("selected_cat"):
+        cat_filter = st.session_state.selected_cat
+    # Клик по карточке категории перекрывает sidebar фильтр
+    if st.session_state.get("selected_cat"):
+        cat_filter = st.session_state.selected_cat
 
     days = st.select_slider(
         "ПЕРИОД" if RU else "TIME WINDOW",
@@ -861,16 +868,22 @@ if category == "all":
         sent  = float(s['avg_sentiment'].iloc[0]) if not s.empty and pd.notna(s['avg_sentiment'].iloc[0]) else 0
         hot   = int(s['hot_count'].iloc[0]) if not s.empty and pd.notna(s['hot_count'].iloc[0]) else 0
         arrow = "↑" if sent > 0.05 else "↓" if sent < -0.05 else "→"
+        is_selected = st.session_state.selected_cat == cat_key
+        border_style = f"border:2px solid {color};" if is_selected else f"border:1px solid {_card_brd}; border-top:2px solid {color};"
         with cat_cols[i]:
             st.markdown(f"""
-            <div style="background:{_card_bg}; border:1px solid {_card_brd}; border-top:2px solid {color};
-                        border-radius:8px; padding:0.8rem; text-align:center; margin-bottom:0.5rem;">
+            <div style="background:{_card_bg}; {border_style}
+                        border-radius:8px; padding:0.8rem; text-align:center; margin-bottom:0.2rem;">
                 <div style="font-size:1.4rem">{emoji}</div>
                 <div style="font-family:Space Mono; font-size:0.65rem; color:{_label_clr}; margin:0.2rem 0">{cat_label.upper()}</div>
                 <div style="font-family:Space Mono; font-size:1rem; font-weight:700; color:{color}">{total}</div>
                 <div style="font-size:0.7rem; color:{_meta_clr}">{arrow} {sent:+.2f} · 🔥{hot}</div>
             </div>
             """, unsafe_allow_html=True)
+            btn_label = "✕ Сброс" if is_selected else cat_label
+            if st.button(btn_label, key=f"cat_btn_{cat_key}", use_container_width=True):
+                st.session_state.selected_cat = None if is_selected else cat_key
+                st.rerun()
     st.markdown("<br>", unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -1554,7 +1567,7 @@ with tab7:
                 f'PnL: <span style="color:{pnl_color}">${row["net_pnl"]:+,.0f}</span>'
                 f'</div>'
                 f'<div style="font-size:0.7rem;color:#475569;margin-top:0.3rem;font-style:italic;">{str(row.get("source_symbol","") or "")} · {str(row.get("source_text","") or "")[:80]}</div>'
-                f'<div style="font-size:0.68rem;color:#334155;margin-top:0.2rem;">📅 Найден: {str(row["analyzed_at"])[:16] if row.get("analyzed_at") else "—"}</div>'
+                f'<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.4rem;font-family:Space Mono;">📅 {str(row["analyzed_at"])[:16] if row.get("analyzed_at") else "—"}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
