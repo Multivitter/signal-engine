@@ -1,3 +1,4 @@
+import re
 """
 Signal Engine Dashboard
 Unified intelligence dashboard for crypto + Amazon signals
@@ -978,9 +979,8 @@ with tab1:
                 )
                 # Авто-резюме из базы
                 ai_text = str(row.get('ai_summary') or '').strip()
-                import re as _re
                 for _junk in [r"Вот краткое резюме[^:]*:\s*\n?", r"Краткое резюме[^:]*:\s*\n?", r"\*\*Краткое резюме\*\*[^:]*:\s*\n?", r"\*\*(.*?)\*\*"]:
-                    ai_text = _re.sub(_junk, "", ai_text, flags=_re.IGNORECASE).strip()
+                    ai_text = re.sub(_junk, "", ai_text, flags=re.IGNORECASE).strip()
                 # Чистим мусорные фразы из старых резюме
                 for _junk in [
                     r'Вот краткое резюме[^:]*:\s*\n?',
