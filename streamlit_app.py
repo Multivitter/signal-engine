@@ -44,7 +44,7 @@ def call_gemini(prompt: str) -> str:
         return f"Error: {e}"
 
 
-def generate_insights(category=None, lang="RU"):
+def generate_insights(category=None, lang="RU", days=7):
     conn_ins = psycopg2.connect(DATABASE_URL)
 
     where = f"WHERE scraped_at >= NOW() - INTERVAL '{days} days'"
@@ -398,7 +398,13 @@ body.light-theme, .light-theme .stApp {
 def get_connection():
     for attempt in range(3):
         try:
-            database_url = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+            database_url = (
+                os.getenv("DATABASE_URL") or
+                st.secrets.get("DATABASE_URL", "") or
+                st.secrets.get("database", {}).get("DATABASE_URL", "")
+            )
+            if not database_url:
+                return None
             conn = psycopg2.connect(database_url, connect_timeout=10)
             conn.autocommit = False
             return conn
@@ -424,6 +430,7 @@ def query(sql, params=None):
             except:
                 pass
             if attempt == 2:
+                st.error(f"DB error: {e}")
                 return pd.DataFrame()
             time.sleep(1)
     return pd.DataFrame()
@@ -1272,7 +1279,7 @@ with tab5:
         if generate_btn:
             cat_param = None if ai_category == "all" else ai_category
             with st.spinner("🤖 " + ("Анализирую сигналы..." if RU else "Analyzing signals...")):
-                insights = generate_insights(category=cat_param, lang=lang)
+                insights = generate_insights(category=cat_param, lang=lang, days=days)
 
             if "error" in insights:
                 st.error(insights["error"])
