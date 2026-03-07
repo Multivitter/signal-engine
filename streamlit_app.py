@@ -22,28 +22,50 @@ load_dotenv()
 # ─── GEMINI AI ───────────────────────────────────────────────────────────────
 
 DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
-GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite") or st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+def _get_gemini_keys():
+    keys = []
+    for k in ["GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4"]:
+        v = os.getenv(k) or st.secrets.get(k, "")
+        if v: keys.append(v)
+    return keys if keys else [""]
+
+GEMINI_KEYS    = _get_gemini_keys()
+GEMINI_API_KEY = GEMINI_KEYS[0]
+GEMINI_MODEL_DEFAULT = os.getenv("GEMINI_MODEL", "gemini-1.5-flash-8b") or st.secrets.get("GEMINI_MODEL", "gemini-1.5-flash-8b")
+GEMINI_MODELS_LIST = [
+    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-1.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+]
 
 def call_gemini(prompt: str) -> str:
     import requests as _req
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    try:
-        r = _req.post(
-            url,
-            headers={"Content-Type": "application/json"},
-            params={"key": GEMINI_API_KEY},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-            },
-            timeout=30
-        )
-        if r.status_code == 200:
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return f"Gemini error {r.status_code}: {r.text[:200]}"
-    except Exception as e:
-        return f"Error: {e}"
+    for key in GEMINI_KEYS:
+        try:
+            r = _req.post(
+                url,
+                headers={"Content-Type": "application/json"},
+                params={"key": key},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+                },
+                timeout=30
+            )
+            if r.status_code == 200:
+                return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            if r.status_code == 429:
+                continue  # попробуем следующий ключ
+            return f"Gemini error {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            continue
+    return "⚠️ Все Gemini ключи исчерпали лимит. Добавьте новые ключи в Secrets."
 
 
 def generate_insights(category=None, lang="RU", days=7):
@@ -1237,7 +1259,7 @@ with tab5:
         st.markdown(f"""
         <div class="metric-card" style="margin-bottom:1rem">
             <div class="metric-label">{"МОДЕЛЬ" if RU else "MODEL"}</div>
-            <div style="font-family: Space Mono; font-size:0.85rem; color:#00ff88; margin-top:0.3rem">gemini-2.5-flash-lite</div>
+            <div style="font-family: Space Mono; font-size:0.85rem; color:#00ff88; margin-top:0.3rem">gemini-1.5-flash-8b</div>
         </div>
         """, unsafe_allow_html=True)
 
