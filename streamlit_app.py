@@ -48,7 +48,7 @@ SYSTEM = "Ты — эксперт по крипто-рынкам и e-commerce �
 def call_gemini(prompt: str, model_override: str = None) -> str:
     import requests as _req
     # Пробуем выбранную модель, потом остальные из списка
-    chosen = model_override or GEMINI_MODEL
+    chosen = model_override or st.session_state.get("gemini_model", GEMINI_MODEL_DEFAULT)
     models_to_try = [chosen] + [m for m in GEMINI_MODELS_LIST if m != chosen]
 
     for model in models_to_try:
