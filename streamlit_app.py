@@ -51,6 +51,59 @@ def generate_insights(category=None, lang="RU"):
     if category:
         where += f" AND category = '{category}'"
 
+    posts_df = pd.read_sql(f""""""
+Signal Engine Dashboard
+Unified intelligence dashboard for crypto + Amazon signals
+"""
+
+import streamlit as st
+import psycopg2
+import time
+import psycopg2
+import time
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ─── GEMINI AI ───────────────────────────────────────────────────────────────
+
+DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite") or st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+
+def call_gemini(prompt: str) -> str:
+    import requests as _req
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    try:
+        r = _req.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            params={"key": GEMINI_API_KEY},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+            },
+            timeout=30
+        )
+        if r.status_code == 200:
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return f"Gemini error {r.status_code}: {r.text[:200]}"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def generate_insights(category=None, lang="RU"):
+    conn_ins = psycopg2.connect(DATABASE_URL)
+
+    where = f"WHERE scraped_at >= NOW() - INTERVAL '{days} days'"
+    if category:
+        where += f" AND category = '{category}'"
+
     posts_df = pd.read_sql(f"""
         SELECT subreddit, category, title, upvotes,
                sentiment_label, sentiment_score, is_hot,
@@ -458,7 +511,8 @@ def load_reddit_feed(category=None, days=7, limit=20, only_hot=False):
         SELECT
             title, subreddit, upvotes, comments_count,
             sentiment_label, sentiment_score, is_hot,
-            keywords_found, scraped_at, post_url as url
+            keywords_found, scraped_at, post_url as url,
+            COALESCE(ai_summary, '') as ai_summary
         FROM reddit_posts
         {where}
         ORDER BY upvotes DESC
