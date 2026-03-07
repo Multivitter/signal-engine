@@ -498,7 +498,7 @@ def load_reddit_feed(category=None, days=7, limit=20, only_hot=False):
             COALESCE(ai_summary, '') as ai_summary
         FROM reddit_posts
         {where}
-        ORDER BY upvotes DESC
+        ORDER BY scraped_at DESC, upvotes DESC
         LIMIT {limit}
     """)
 
@@ -978,6 +978,17 @@ with tab1:
                 )
                 # Авто-резюме из базы
                 ai_text = str(row.get('ai_summary') or '').strip()
+                import re as _re
+                for _junk in [r"Вот краткое резюме[^:]*:\s*\n?", r"Краткое резюме[^:]*:\s*\n?", r"\*\*Краткое резюме\*\*[^:]*:\s*\n?", r"\*\*(.*?)\*\*"]:
+                    ai_text = _re.sub(_junk, "", ai_text, flags=_re.IGNORECASE).strip()
+                # Чистим мусорные фразы из старых резюме
+                for _junk in [
+                    r'Вот краткое резюме[^:]*:\s*\n?',
+                    r'Краткое резюме[^:]*:\s*\n?',
+                    r'\*\*[^*]+\*\*:?\s*',
+                    r'\*\*(.*?)\*\*',
+                ]:
+                    ai_text = re.sub(_junk, '', ai_text, flags=re.IGNORECASE).strip()
                 if ai_text:
                     _sbg = "#0d1117" if DARK else "#f0fdf4"
                     _stc = "#94a3b8" if DARK else "#334155"
