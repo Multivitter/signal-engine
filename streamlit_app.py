@@ -5,59 +5,6 @@ Unified intelligence dashboard for crypto + Amazon signals
 
 import streamlit as st
 import psycopg2
-import psycopg2.extras
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# ─── GEMINI AI ───────────────────────────────────────────────────────────────
-
-DATABASE_URL   = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
-GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite") or st.secrets.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
-
-def call_gemini(prompt: str) -> str:
-    import requests as _req
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    try:
-        r = _req.post(
-            url,
-            headers={"Content-Type": "application/json"},
-            params={"key": GEMINI_API_KEY},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-            },
-            timeout=30
-        )
-        if r.status_code == 200:
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return f"Gemini error {r.status_code}: {r.text[:200]}"
-    except Exception as e:
-        return f"Error: {e}"
-
-
-def generate_insights(category=None, lang="RU"):
-    conn_ins = psycopg2.connect(DATABASE_URL)
-
-    where = "WHERE scraped_at >= NOW() - INTERVAL '24 hours'"
-    if category:
-        where += f" AND category = '{category}'"
-
-    posts_df = pd.read_sql(f"""
-        SELECT subreddit, category, title, upvotes,
-               sentiment_label, sentiment_score, is_hot,"""
-Signal Engine Dashboard
-Unified intelligence dashboard for crypto + Amazon signals
-"""
-
-import streamlit as st
-import psycopg2
 import time
 import psycopg2
 import time.extras
@@ -200,10 +147,12 @@ def generate_insights(category=None, lang="RU"):
         hot = posts_df[posts_df['is_hot']==True].head(10)
         hot_text = "\n".join([f"[{r['category'].upper()} {r['upvotes']}↑] {r['title'][:90]}"
                                 for _, r in hot.iterrows()])
+        crypto_sent = get_stat('crypto','avg_sentiment')
+        amazon_sent = get_stat('amazon','avg_sentiment')
         results["summary"] = call_gemini(f"""{SYSTEM}
 
-Crypto sentiment: {get_stat('crypto','avg_sentiment'):+.3f}
-Amazon sentiment: {get_stat('amazon','avg_sentiment'):+.3f}
+Crypto sentiment: {crypto_sent:+.3f}
+Amazon sentiment: {amazon_sent:+.3f}
 
 ТОП ГОРЯЧИЕ:
 {hot_text}
