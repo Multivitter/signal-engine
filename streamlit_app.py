@@ -1,9 +1,9 @@
-
+import re
 """
 Signal Engine Dashboard
 Unified intelligence dashboard for crypto + Amazon signals
 """
-import re
+
 import streamlit as st
 import psycopg2
 import time
@@ -1002,7 +1002,11 @@ with tab1:
                         f"Пост: {row['title']}\n"
                         f"r/{row['subreddit']} | {row.get('upvotes',0):,} апвоутов"
                     )
-                    ai_text = clean_summary(call_gemini(_prompt))
+                    _cache_key = f"sum_{hash(row['title'])}"
+                    if _cache_key not in st.session_state:
+                        time.sleep(0.5)
+                        st.session_state[_cache_key] = clean_summary(call_gemini(_prompt))
+                    ai_text = st.session_state[_cache_key]
                 if ai_text:
                     st.markdown(
                         f'<div style="background:{_sbg};border-left:2px solid #00ff88;'
